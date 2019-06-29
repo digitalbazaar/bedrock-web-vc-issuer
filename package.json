@@ -1,0 +1,28 @@
+{
+  "name": "bedrock-web-vc-issuer",
+  "version": "0.0.1-0",
+  "description": "Verifiable Credential Issuer API for Bedrock Web Apps",
+  "main": "index.js",
+  "scripts": {
+    "generate-readme": "jsdoc2md -t template.hbs *.js > README.md"
+  },
+  "dependencies": {
+    "axios": "^0.18.0",
+    "secure-data-hub-client": "digitalbazaar/secure-data-hub-client#add-meta-support",
+    "web-kms-client": "digitalbazaar/web-kms-client#ocap-refactor"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digitalbazaar/bedrock-web-vc-issuer"
+  },
+  "bedrock": {
+    "browserDependencies": "all"
+  },
+  "devDependencies": {
+    "eslint": "^5.15.3",
+    "eslint-config-digitalbazaar": "^2.0.0",
+    "eslint-plugin-jsdoc": "^4.6.0",
+    "jsdoc": "^3.5.5",
+    "jsdoc-to-markdown": "^4.0.1"
+  }
+}
