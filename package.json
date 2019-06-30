@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
-    "secure-data-hub-client": "digitalbazaar/secure-data-hub-client#add-meta-support",
-    "web-kms-client": "digitalbazaar/web-kms-client#ocap-refactor"
+    "secure-data-hub-client": "digitalbazaar/secure-data-hub-client#initial",
+    "web-kms-client": "digitalbazaar/web-kms-client#initial"
   },
   "repository": {
     "type": "git",
