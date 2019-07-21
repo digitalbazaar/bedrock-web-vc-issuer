@@ -6,6 +6,7 @@
 import {DataHubDocument} from 'secure-data-hub-client';
 import {ControllerKey, KmsClient} from 'web-kms-client';
 
+const DEFAULT_HEADERS = {Accept: 'application/ld+json, application/json'};
 const KMS_BASE_URL = `${window.location.origin}/kms`;
 
 export async function getControllerKey({account}) {
@@ -19,12 +20,14 @@ export async function getControllerKey({account}) {
 
 export async function getDataHubDocument({account, capability}) {
   const controllerKey = await getControllerKey({account});
-  const [kek, hmac] = await Promise.all([
-    await controllerKey.getKek({id: account.kek.id, type: account.kek.type}),
+  const [keyAgreementKey, hmac] = await Promise.all([
+    await controllerKey.getKeyAgreementKey(
+      {id: account.kak.id, type: account.kak.type}),
     await controllerKey.getHmac({id: account.hmac.id, type: account.hmac.type})
   ]);
   const invocationSigner = controllerKey;
-  return new DataHubDocument({kek, hmac, capability, invocationSigner});
+  return new DataHubDocument(
+    {keyResolver, keyAgreementKey, hmac, capability, invocationSigner});
 }
 
 async function _createKeystore({controllerKey, referenceId} = {}) {
@@ -60,4 +63,12 @@ async function _ensureKeystore({controllerKey}) {
   }
   controllerKey.kmsClient.keystore = config.id;
   return config;
+}
+
+// FIXME: make more restrictive, support `did:key` and `did:v1`
+async function keyResolver({id}) {
+  const response = await axios.get(id, {
+    headers: DEFAULT_HEADERS
+  });
+  return response.data;
 }
