@@ -4,11 +4,17 @@
 'use strict';
 
 import {DataHubDocument} from 'secure-data-hub-client';
-import {ControllerKey} from 'web-kms-client';
+import {ControllerKey, KmsClient} from 'web-kms-client';
+
+const KMS_BASE_URL = `${window.location.origin}/kms`;
 
 export async function getControllerKey({account}) {
   const {controllerKeySeed: secret} = account;
-  return ControllerKey.fromSecret({secret, handle: account.id});
+  const kmsClient = new KmsClient();
+  const controllerKey = await ControllerKey.fromSecret(
+    {secret, handle: account.id, kmsClient});
+  await _ensureKeystore({controllerKey});
+  return controllerKey;
 }
 
 export async function getDataHubDocument({account, capability}) {
@@ -19,4 +25,39 @@ export async function getDataHubDocument({account, capability}) {
   ]);
   const invocationSigner = controllerKey;
   return new DataHubDocument({kek, hmac, capability, invocationSigner});
+}
+
+async function _createKeystore({controllerKey, referenceId} = {}) {
+  // create keystore
+  const config = {
+    sequence: 0,
+    controller: controllerKey.id,
+    // TODO: add `invoker` and `delegator` using arrays including
+    // controllerKey.id *and* identifier for backup key recovery entity
+    invoker: controllerKey.id,
+    delegator: controllerKey.id
+  };
+  if(referenceId) {
+    config.referenceId = referenceId;
+  }
+  return await KmsClient.createKeystore({
+    url: `${KMS_BASE_URL}/keystores`,
+    config
+  });
+}
+
+async function _ensureKeystore({controllerKey}) {
+  let config = await KmsClient.findKeystore({
+    url: `${KMS_BASE_URL}/keystores`,
+    controller: controllerKey.id,
+    referenceId: 'primary'
+  });
+  if(config === null) {
+    config = await _createKeystore({controllerKey, referenceId: 'primary'});
+  }
+  if(config === null) {
+    return null;
+  }
+  controllerKey.kmsClient.keystore = config.id;
+  return config;
 }
