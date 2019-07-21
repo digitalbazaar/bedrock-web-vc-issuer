@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
-    "secure-data-hub-client": "digitalbazaar/secure-data-hub-client#initial",
+    "secure-data-hub-client": "digitalbazaar/secure-data-hub-client#key-agreement",
     "web-kms-client": "digitalbazaar/web-kms-client#http-sig"
   },
   "repository": {
