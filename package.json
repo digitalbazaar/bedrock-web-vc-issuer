@@ -9,7 +9,7 @@
   "dependencies": {
     "axios": "^0.18.0",
     "secure-data-hub-client": "digitalbazaar/secure-data-hub-client#initial",
-    "web-kms-client": "digitalbazaar/web-kms-client#initial"
+    "web-kms-client": "digitalbazaar/web-kms-client#http-sig"
   },
   "repository": {
     "type": "git",
