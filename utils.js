@@ -3,6 +3,7 @@
  */
 'use strict';
 
+import axios from 'axios';
 import {DataHubDocument} from 'secure-data-hub-client';
 import {ControllerKey, KmsClient} from 'web-kms-client';
 
@@ -18,6 +19,12 @@ export async function getControllerKey({account}) {
   return controllerKey;
 }
 
+export async function getKeyAgreementKey({account}) {
+  const controllerKey = await getControllerKey({account});
+  return await controllerKey.getKeyAgreementKey(
+    {id: account.kak.id, type: account.kak.type});
+}
+
 export async function getDataHubDocument({account, capability}) {
   const controllerKey = await getControllerKey({account});
   const [keyAgreementKey, hmac] = await Promise.all([
@@ -26,8 +33,13 @@ export async function getDataHubDocument({account, capability}) {
     await controllerKey.getHmac({id: account.hmac.id, type: account.hmac.type})
   ]);
   const invocationSigner = controllerKey;
-  return new DataHubDocument(
-    {keyResolver, keyAgreementKey, hmac, capability, invocationSigner});
+  const recipients = [{
+    header: {kid: keyAgreementKey.id, alg: 'ECDH-ES+A256KW'}
+  }];
+  return new DataHubDocument({
+    recipients, keyResolver, keyAgreementKey, hmac,
+    capability, invocationSigner
+  });
 }
 
 async function _createKeystore({controllerKey, referenceId} = {}) {

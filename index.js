@@ -5,7 +5,9 @@
 
 import axios from 'axios';
 
-export {getControllerKey, getDataHubDocument} from './utils.js';
+export {
+  getControllerKey, getKeyAgreementKey, getDataHubDocument
+} from './utils.js';
 
 import * as registrations from './registrations.js';
 import * as configurations from './configurations.js';

@@ -15,9 +15,21 @@ export async function create({credential, account, registration}) {
   const capability = registration.capability.find(
     c => c.referenceId === 'configuration');
   const dataHubDoc = await getDataHubDocument({account, capability});
+  // read dataHubDoc first to get previous version
+  let doc;
+  try {
+    doc = await dataHubDoc.read();
+  } catch(e) {
+    if(e.name !== 'NotFoundError') {
+      throw e;
+    }
+    // doc not created yet, this is ok
+    doc = {id: dataHubDoc.id};
+  }
+
   await dataHubDoc.write({
     doc: {
-      id: dataHubDoc.id,
+      ...doc,
       content: {
         // TODO: Consider using a uuid, consider creating an index on the issuer
         id: issuer.id, // FIXME: Redundant data
