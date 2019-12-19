@@ -4,8 +4,8 @@
 'use strict';
 
 import axios from 'axios';
-import {DataHubDocument} from 'secure-data-hub-client';
-import {ControllerKey, KmsClient} from 'web-kms-client';
+import {EdvDocument} from 'edv-client';
+import {ControllerKey, KmsClient} from 'webkms-client';
 
 const DEFAULT_HEADERS = {Accept: 'application/ld+json, application/json'};
 const KMS_BASE_URL = `${window.location.origin}/kms`;
@@ -25,7 +25,7 @@ export async function getKeyAgreementKey({account}) {
     {id: account.kak.id, type: account.kak.type});
 }
 
-export async function getDataHubDocument({account, capability}) {
+export async function getEdvDocument({account, capability}) {
   const controllerKey = await getControllerKey({account});
   const [keyAgreementKey, hmac] = await Promise.all([
     await controllerKey.getKeyAgreementKey(
@@ -36,7 +36,7 @@ export async function getDataHubDocument({account, capability}) {
   const recipients = [{
     header: {kid: keyAgreementKey.id, alg: 'ECDH-ES+A256KW'}
   }];
-  return new DataHubDocument({
+  return new EdvDocument({
     recipients, keyResolver, keyAgreementKey, hmac,
     capability, invocationSigner
   });

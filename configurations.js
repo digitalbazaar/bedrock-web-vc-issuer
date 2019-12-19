@@ -5,7 +5,7 @@
 
 import axios from 'axios';
 
-import {getDataHubDocument} from './utils.js';
+import {getEdvDocument} from './utils.js';
 import * as registrations from './registrations.js';
 
 const route = '/vc-issuer/configurations';
@@ -14,20 +14,20 @@ export async function create({credential, account, registration}) {
   const {credentialSubject: issuer} = credential;
   const capability = registration.capability.find(
     c => c.referenceId === 'configuration');
-  const dataHubDoc = await getDataHubDocument({account, capability});
-  // read dataHubDoc first to get previous version
+  const edvDoc = await getEdvDocument({account, capability});
+  // read edvDoc first to get previous version
   let doc;
   try {
-    doc = await dataHubDoc.read();
+    doc = await edvDoc.read();
   } catch(e) {
     if(e.name !== 'NotFoundError') {
       throw e;
     }
     // doc not created yet, this is ok
-    doc = {id: dataHubDoc.id};
+    doc = {id: edvDoc.id};
   }
 
-  await dataHubDoc.write({
+  await edvDoc.write({
     doc: {
       ...doc,
       content: {
@@ -46,8 +46,8 @@ export async function get({issuer, account}) {
   const {registration} = await registrations.get({issuer});
   const capability = registration.capability.find(
     c => c.referenceId === 'configuration');
-  const dataHubDoc = await getDataHubDocument({account, capability});
-  const doc = await dataHubDoc.read();
+  const edvDoc = await getEdvDocument({account, capability});
+  const doc = await edvDoc.read();
   return doc.content;
 }
 
@@ -60,9 +60,9 @@ export async function update({config, issuer, account}) {
   const {registration} = await registrations.get({issuer});
   const capability = registration.capability.find(
     c => c.referenceId === 'configuration');
-  const dataHubDoc = await getDataHubDocument({account, capability});
-  const doc = await dataHubDoc.read();
-  await dataHubDoc.write({
+  const edvDoc = await getEdvDocument({account, capability});
+  const doc = await edvDoc.read();
+  await edvDoc.write({
     doc: {
       ...doc,
       content: config
@@ -75,6 +75,6 @@ export async function remove({issuer, account}) {
   const {registration} = await registrations.get({issuer});
   const capability = registration.capability.find(
     c => c.referenceId === 'configuration');
-  const dataHubDoc = await getDataHubDocument({account, capability});
-  return dataHubDoc.delete();
+  const edvDoc = await getEdvDocument({account, capability});
+  return edvDoc.delete();
 }
