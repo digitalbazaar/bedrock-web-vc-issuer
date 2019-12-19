@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
-    "secure-data-hub-client": "^1.0.0",
-    "web-kms-client": "digitalbazaar/web-kms-client#http-sig"
+    "edv-client": "^2.0.0",
+    "webkms-client": "^1.0.0"
   },
   "repository": {
     "type": "git",
