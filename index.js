@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) 2019 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
 'use strict';
 
@@ -9,24 +9,24 @@ export {
   getControllerKey, getKeyAgreementKey, getEdvDocument
 } from './utils.js';
 
-import * as registrations from './registrations.js';
+import * as instances from './instances.js';
 import * as configurations from './configurations.js';
-export {registrations, configurations};
+export {instances, configurations};
 
 export async function registerIssuer({presentation, account}) {
-  // create the issuer registration and the issuer configuration
+  // create the issuer instance and the issuer configuration
   const {verifiableCredential: [credential]} = presentation;
-  const {registration} = await registrations.create(
+  const {instance} = await instances.create(
     {controller: account.id, presentation});
-  await configurations.create({credential, account, registration});
+  await configurations.create({credential, account, instance});
 }
 
 export async function unregisterIssuer({issuer, account}) {
   // first remove configuration
   await configurations.remove({issuer, account});
 
-  // remove registration
-  return registrations.remove({issuer});
+  // remove instance
+  return instances.remove({issuer});
 }
 
 export async function issue(
