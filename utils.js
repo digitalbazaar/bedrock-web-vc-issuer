@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) 2019 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
 'use strict';
 
@@ -25,7 +25,7 @@ export async function getKeyAgreementKey({account}) {
     {id: account.kak.id, type: account.kak.type});
 }
 
-export async function getEdvDocument({account, capability}) {
+export async function getEdvDocument({id, account, capability}) {
   const controllerKey = await getControllerKey({account});
   const [keyAgreementKey, hmac] = await Promise.all([
     await controllerKey.getKeyAgreementKey(
@@ -37,7 +37,7 @@ export async function getEdvDocument({account, capability}) {
     header: {kid: keyAgreementKey.id, alg: 'ECDH-ES+A256KW'}
   }];
   return new EdvDocument({
-    recipients, keyResolver, keyAgreementKey, hmac,
+    id, recipients, keyResolver, keyAgreementKey, hmac,
     capability, invocationSigner
   });
 }
