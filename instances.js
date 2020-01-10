@@ -5,11 +5,19 @@
 
 import axios from 'axios';
 
+import {EdvClient} from 'edv-client';
+
 const route = '/vc-issuer/instances';
 
 export async function create({controller, presentation}) {
   const url = route;
-  const response = await axios.post(url, {controller, presentation});
+  const response = await axios.post(url, {
+    controller,
+    presentation,
+    // FIXME: temporary, remove/replace with other design like one
+    // that uses indexing on controller/issuer information
+    configId: await EdvClient.generateId()
+  });
   return response.data;
 }
 

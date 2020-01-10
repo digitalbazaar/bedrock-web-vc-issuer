@@ -14,7 +14,8 @@ export async function create({credential, account, instance}) {
   const {credentialSubject: issuer} = credential;
   const capability = instance.capability.find(
     c => c.referenceId === 'configuration');
-  const edvDoc = await getEdvDocument({account, capability});
+  const edvDoc = await getEdvDocument(
+    {account, id: instance.configId, capability});
   // read edvDoc first to get previous version
   let doc;
   try {
@@ -46,7 +47,8 @@ export async function get({issuer, account}) {
   const {instance} = await instances.get({issuer});
   const capability = instance.capability.find(
     c => c.referenceId === 'configuration');
-  const edvDoc = await getEdvDocument({account, capability});
+  const edvDoc = await getEdvDocument(
+    {account, id: instance.configId, capability});
   const doc = await edvDoc.read();
   return doc.content;
 }
@@ -60,7 +62,8 @@ export async function update({config, issuer, account}) {
   const {instance} = await instances.get({issuer});
   const capability = instance.capability.find(
     c => c.referenceId === 'configuration');
-  const edvDoc = await getEdvDocument({account, capability});
+  const edvDoc = await getEdvDocument(
+    {account, id: instance.configId, capability});
   const doc = await edvDoc.read();
   await edvDoc.write({
     doc: {
@@ -75,6 +78,7 @@ export async function remove({issuer, account}) {
   const {instance} = await instances.get({issuer});
   const capability = instance.capability.find(
     c => c.referenceId === 'configuration');
-  const edvDoc = await getEdvDocument({account, capability});
+  const edvDoc = await getEdvDocument(
+    {account, id: instance.configId, capability});
   return edvDoc.delete();
 }
