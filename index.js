@@ -13,8 +13,9 @@ export {
 export {default as Collection} from './Collection.js';
 
 import * as instances from './instances.js';
-//import * as configurations from './configurations.js';
-export {instances};//, configurations};
+// FIXME: disable configurations
+import * as configurations from './configurations.js';
+export {instances, configurations};
 
 export async function registerIssuer({presentation, account}) {
   // create the issuer instance and the issuer configuration
