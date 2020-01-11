@@ -17,6 +17,9 @@ export default class Collection {
   }
 
   async create({item}) {
+    if(item.type !== this.type) {
+      throw new TypeError(`"item.type" (${item.type}) must be "${this.type}".`);
+    }
     const {account, instance, capability} = this;
     const edvDoc = await getEdvDocument({account, instance, capability});
     const id = await EdvClient.generateId();
