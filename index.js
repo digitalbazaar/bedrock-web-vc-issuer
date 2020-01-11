@@ -22,12 +22,12 @@ export async function registerIssuer({presentation, account}) {
   const {verifiableCredential: [credential]} = presentation;
   const {instance} = await instances.create(
     {controller: account.id, presentation});
-  //await configurations.create({credential, account, instance});
+  await configurations.create({credential, account, instance});
 }
 
 export async function unregisterIssuer({issuer, account}) {
   // first remove configuration
-  //await configurations.remove({issuer, account});
+  await configurations.remove({issuer, account});
   // remove instance
   return instances.remove({issuer});
 }
