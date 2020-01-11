@@ -43,6 +43,9 @@ export default class Collection {
   }
 
   async update({item}) {
+    if(item.type !== this.type) {
+      throw new TypeError(`"item.type" (${item.type}) must be "${this.type}".`);
+    }
     const {account, capability} = this;
     const existing = await this.get({id: item.id});
     const edvDoc = await getEdvDocument({account, id: existing.id, capability});
