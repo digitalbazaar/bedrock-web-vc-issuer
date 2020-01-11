@@ -6,25 +6,27 @@
 import axios from 'axios';
 
 export {
-  getControllerKey, getKeyAgreementKey, getEdvDocument
+  getControllerKey, getKeyAgreementKey, findDocuments,
+  getEdvDocument, getEdvClient
 } from './utils.js';
 
+export {default as Collection} from './Collection.js';
+
 import * as instances from './instances.js';
-import * as configurations from './configurations.js';
-export {instances, configurations};
+//import * as configurations from './configurations.js';
+export {instances};//, configurations};
 
 export async function registerIssuer({presentation, account}) {
   // create the issuer instance and the issuer configuration
   const {verifiableCredential: [credential]} = presentation;
   const {instance} = await instances.create(
     {controller: account.id, presentation});
-  await configurations.create({credential, account, instance});
+  //await configurations.create({credential, account, instance});
 }
 
 export async function unregisterIssuer({issuer, account}) {
   // first remove configuration
-  await configurations.remove({issuer, account});
-
+  //await configurations.remove({issuer, account});
   // remove instance
   return instances.remove({issuer});
 }
