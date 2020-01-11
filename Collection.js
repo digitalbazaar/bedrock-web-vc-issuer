@@ -3,6 +3,7 @@
  */
 'use strict';
 
+import {EdvClient} from 'edv-client';
 import {findDocuments, getEdvDocument} from './utils.js';
 
 export default class Collection {
@@ -18,7 +19,8 @@ export default class Collection {
   async create({item}) {
     const {account, instance, capability} = this;
     const edvDoc = await getEdvDocument({account, instance, capability});
-    await edvDoc.write({doc: {content: item}});
+    const id = await EdvClient.generateId();
+    await edvDoc.write({doc: {id, content: item}});
   }
 
   async get({id}) {
