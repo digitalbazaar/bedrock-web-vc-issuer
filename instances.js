@@ -13,6 +13,12 @@ export async function create({instance}) {
   return response.data;
 }
 
+export async function setIssuer({id, controller, presentation}) {
+  const url = `${route}/${encodeURIComponent(id)}/issuer`;
+  const response = await axios.post(url, {controller, presentation});
+  return response.data;
+}
+
 export async function get({id}) {
   const url = `${route}/${encodeURIComponent(id)}`;
   const response = await axios.get(url);
