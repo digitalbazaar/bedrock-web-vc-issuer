@@ -40,7 +40,7 @@ export async function delegateCapabilities({account, instance, user}) {
     store: `${instance.id}-edv-configuration`,
     issue: `${instance.id}-key-assertionMethod`
   };
-  const [store, issue] = await Promise.all(Object.keys(refs).map(
+  const [store, issue] = await Promise.all(Object.values(refs).map(
     referenceId => getCapability({referenceId, controller: account.id})));
 
   // map what are essentially permissions to the appropriate capabilities
@@ -67,6 +67,10 @@ export async function delegateCapabilities({account, instance, user}) {
   const zcaps = [];
   for(const type in zcapMap) {
     const parent = zcapMap[type];
+    if(parent === null) {
+      // no parent zcap for what is being delegated
+      throw new Error('Permission Denied.');
+    }
     // delegate zcap
     const zcap = {
       '@context': SECURITY_CONTEXT_V2_URL,
@@ -98,6 +102,10 @@ export async function delegateCapabilities({account, instance, user}) {
   const users = await Collection.getInstance(
     {type: 'User', instance, account});
   await users.update({item: user});
+
+  // FIXME: if the `user` was already claimed, we need to update/revoke
+  // existing zcaps for their account; we need an endpoint for this
+  // that will reprocess the `user` object
 
   return user;
 }
