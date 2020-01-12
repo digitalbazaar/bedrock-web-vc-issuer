@@ -72,8 +72,8 @@ export async function getEdvClient({controllerKey, account, instance}) {
     controllerKey = await getControllerKey({account});
   }
   const [kakZcap, hmacZcap] = await Promise.all([
-    getCapability({referenceId: `${instance.id}-kak`}),
-    getCapability({referenceId: `${instance.id}-hmac`})
+    getCapability({controller: account.id, referenceId: `${instance.id}-kak`}),
+    getCapability({controller: account.id, referenceId: `${instance.id}-hmac`})
   ]);
   const [keyAgreementKey, hmac] = await Promise.all([
     controllerKey.getKeyAgreementKey(
