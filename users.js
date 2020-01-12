@@ -12,3 +12,9 @@ export async function claim({instanceId, token}) {
   const response = await axios.post(url, {instanceId, token});
   return response.data;
 }
+
+export async function get({instanceId, token}) {
+  const url = `${route}/${encodeURIComponent(instanceId)}/users`;
+  const response = await axios.get(url, {params: {token}});
+  return response.data;
+}
