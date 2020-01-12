@@ -83,8 +83,10 @@ export async function getEdvClient({controllerKey, account, instance}) {
   ]);
   const client = new EdvClient({keyResolver, keyAgreementKey, hmac});
   // create indexes for documents
-  client.ensureIndex({attribute: 'content.type'});
   client.ensureIndex({attribute: 'content.id', unique: true});
+  client.ensureIndex({attribute: 'content.type'});
+  client.ensureIndex(
+    {attribute: ['content.type', 'meta.token.id'], unique: true});
   // TODO: index based on supported credential types for the instance
   // TODO: will need to be able to get all
   // `content.type === 'VerifiableCredential'` and reindex as needed

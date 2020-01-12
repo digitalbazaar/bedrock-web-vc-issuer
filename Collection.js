@@ -23,19 +23,31 @@ export default class Collection {
     return new Collection({type, instance, account, capability});
   }
 
-  async create({item}) {
+  async create({item, meta}) {
     if(item.type !== this.type) {
       throw new TypeError(`"item.type" (${item.type}) must be "${this.type}".`);
     }
     const {account, instance, capability} = this;
     const edvDoc = await getEdvDocument({account, instance, capability});
     const id = await EdvClient.generateId();
-    await edvDoc.write({doc: {id, content: item}});
+    await edvDoc.write({doc: {id, content: item, meta}});
   }
 
-  async get({id}) {
+  async get({id, token}) {
     const {account, instance, capability} = this;
-    const results = await findDocuments({account, instance, id, capability});
+    let results;
+    if(id) {
+      results = await findDocuments({account, instance, id, capability});
+    } else if(token) {
+      results = await findDocuments({
+        account,
+        instance,
+        equals: {'content.type': this.type, 'meta.token.id': token},
+        capability
+      });
+    } else {
+      throw new TypeError('"id" or "token" must be given.');
+    }
     if(results.length > 0) {
       return results[0];
     }
@@ -49,29 +61,37 @@ export default class Collection {
     return results;
   }
 
-  async update({item}) {
+  async update({item, meta}) {
     if(item.type !== this.type) {
       throw new TypeError(`"item.type" (${item.type}) must be "${this.type}".`);
     }
-    const {account, capability} = this;
+    const {account, instance, capability} = this;
     const existing = await this.get({id: item.id});
-    const edvDoc = await getEdvDocument({account, id: existing.id, capability});
+    const edvDoc = await getEdvDocument(
+      {id: existing.id, account, instance, capability});
     const doc = await edvDoc.read();
+    const updatedDoc = {
+      ...doc
+    };
+    if(item) {
+      updatedDoc.content = item;
+    }
+    if(meta) {
+      updatedDoc.meta = meta;
+    }
     await edvDoc.write({
-      doc: {
-        ...doc,
-        content: item
-      }
+      doc: updatedDoc
     });
   }
 
   async remove({id}) {
-    const {account, capability} = this;
+    const {account, instance, capability} = this;
     const existing = await this.get({id});
     if(!existing) {
       return false;
     }
-    const edvDoc = await getEdvDocument({account, id: existing.id, capability});
+    const edvDoc = await getEdvDocument(
+      {id: existing.id, account, instance, capability});
     return edvDoc.delete();
   }
 }
