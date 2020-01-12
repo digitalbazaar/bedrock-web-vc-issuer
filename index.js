@@ -3,7 +3,7 @@
  */
 'use strict';
 
-import axios from 'axios';
+//import axios from 'axios';
 
 export {
   getControllerKey, getKeyAgreementKey, findDocuments,
@@ -14,9 +14,10 @@ export {default as Collection} from './Collection.js';
 
 import * as instances from './instances.js';
 // FIXME: disable configurations
-import * as configurations from './configurations.js';
-export {instances, configurations};
+//import * as configurations from './configurations.js';
+export {instances};//, configurations};
 
+/*
 export async function registerIssuer({presentation, account}) {
   // create the issuer instance and the issuer configuration
   const {verifiableCredential: [credential]} = presentation;
@@ -39,3 +40,4 @@ export async function issue(
     url, {issuer, flow, credentials, presentation});
   return response.data;
 }
+*/

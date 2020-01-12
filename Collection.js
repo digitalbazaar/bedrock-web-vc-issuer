@@ -13,7 +13,7 @@ export default class Collection {
     this.account = account;
     // FIXME: get capability from `account`, not instance
     this.capability = instance.capability.find(
-      c => c.referenceId === 'configuration');
+      c => c.referenceId === `${instance.id}-configuration`);
   }
 
   async create({item}) {
