@@ -95,15 +95,22 @@ export async function getEdvClient({controllerKey, account, instance}) {
 
 export async function getCapability({referenceId, controller}) {
   const url = '/zcaps';
-  const response = await axios.get(url, {
-    params: {
-      referenceId,
-      controller
+  try {
+    const response = await axios.get(url, {
+      params: {
+        referenceId,
+        controller
+      }
+    });
+    const capability = response.data;
+    return capability;
+  } catch(e) {
+    // FIXME: make response handling more robust
+    if(e.response && e.response.status === 404) {
+      return null;
     }
-  });
-  // FIXME: make response handling more robust
-  const capability = response.data;
-  return capability;
+    throw e;
+  }
 }
 
 async function _createKeystore({controllerKey, referenceId} = {}) {
