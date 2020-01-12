@@ -57,6 +57,11 @@ export async function delegateCapabilities({account, instance, user}) {
     zcapMap.read = store;
   }
 
+  if(zcapMap.read || zcapMap.write) {
+    zcapMap.kak = instance.keys.kak;
+    zcapMap.hmac = instance.keys.hmac;
+  }
+
   // delegate zcaps, each type in `zcapMap` using account's `controllerKey`
   // FIXME: consider using a KMS zcapKey for the `account` that is controlled
   // by the `controllerKey` in the future for another layer of security
