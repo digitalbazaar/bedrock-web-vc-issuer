@@ -4,16 +4,23 @@
 'use strict';
 
 import {EdvClient} from 'edv-client';
-import {findDocuments, getEdvDocument} from './utils.js';
+import {findDocuments, getEdvDocument, getCapability} from './utils.js';
 
 export default class Collection {
-  constructor({type, instance, account}) {
+  constructor({type, instance, account, capability}) {
     this.type = type;
     this.instance = instance;
     this.account = account;
-    // FIXME: get capability from `account`, not instance
-    this.capability = instance.capability.find(
-      c => c.referenceId === `${instance.id}-configuration`);
+    this.capability = capability;
+  }
+
+  // FIXME: bikeshed name
+  static async getInstance({type, instance, account}) {
+    const capability = await getCapability({
+      referenceId: `${instance.id}-edv-configuration`,
+      controller: account.id
+    });
+    return new Collection({type, instance, account, capability});
   }
 
   async create({item}) {

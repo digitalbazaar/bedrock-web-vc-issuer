@@ -15,14 +15,14 @@ export async function getControllerKey({account}) {
   const kmsClient = new KmsClient();
   const controllerKey = await ControllerKey.fromSecret(
     {secret, handle: account.id, kmsClient});
-  await _ensureKeystore({controllerKey});
+  // FIXME: determine if extra layer of security will be used
+  //await _ensureKeystore({controllerKey});
   return controllerKey;
 }
 
-export async function getKeyAgreementKey({account}) {
+export async function getKeyAgreementKey({account, instance}) {
   const controllerKey = await getControllerKey({account});
-  return await controllerKey.getKeyAgreementKey(
-    {id: account.kak.id, type: account.kak.type});
+  return await controllerKey.getKeyAgreementKey(instance.keys.kak);
 }
 
 export async function findDocuments(
@@ -68,20 +68,18 @@ export async function getEdvDocument({id, account, instance, capability}) {
 }
 
 export async function getEdvClient({controllerKey, account, instance}) {
-  // FIXME: instead of using KeyAgreementKey and HMAC for the account ...
-  // use it for the issuer `instance` ... and give zcaps to the controller
-  // key to do so... users with `read` only need HMAC `verify` and KaK `derive`
-  // and users with `write` need HMAC `sign`... then controller key also
-  // needs zcap for the vault... pass `capability` to `getKeyAgreementKey`
-  // and `getHmac` keys below... the `account` did:key that creates the
-  // instance is the first `controller` of the instance's keystore
   if(!controllerKey) {
     controllerKey = await getControllerKey({account});
   }
+  const [kakZcap, hmacZcap] = await Promise.all([
+    getCapability({referenceId: `${instance.id}-kak`}),
+    getCapability({referenceId: `${instance.id}-hmac`})
+  ]);
   const [keyAgreementKey, hmac] = await Promise.all([
-    await controllerKey.getKeyAgreementKey(
-      {id: account.kak.id, type: account.kak.type}),
-    await controllerKey.getHmac({id: account.hmac.id, type: account.hmac.type})
+    controllerKey.getKeyAgreementKey(
+      {...instance.keys.kak, capability: kakZcap}),
+    controllerKey.getHmac(
+      {...instance.keys.hmac, capability: hmacZcap})
   ]);
   const client = new EdvClient({keyResolver, keyAgreementKey, hmac});
   // create indexes for documents
@@ -91,6 +89,19 @@ export async function getEdvClient({controllerKey, account, instance}) {
   // TODO: will need to be able to get all
   // `content.type === 'VerifiableCredential'` and reindex as needed
   return client;
+}
+
+export async function getCapability({referenceId, controller}) {
+  const url = '/zcaps';
+  const response = await axios.get(url, {
+    params: {
+      referenceId,
+      controller
+    }
+  });
+  // FIXME: make response handling more robust
+  const capability = response.data;
+  return capability;
 }
 
 async function _createKeystore({controllerKey, referenceId} = {}) {
