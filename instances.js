@@ -41,3 +41,66 @@ export async function remove({id}) {
     throw e;
   }
 }
+
+export async function requestCapabilities({instance}) {
+  console.log('request credential issuance capabilities...');
+  try {
+    const webCredential = await navigator.credentials.get({
+      web: {
+        VerifiablePresentation: {
+          query: {
+            type: 'OcapLdQuery',
+            capabilityQuery: [{
+              referenceId: `${instance.id}-edv-configuration`,
+              allowedAction: ['read', 'write'],
+              invoker: instance.keys.zcapKey.id,
+              delegator: instance.keys.zcapKey.id,
+              invocationTarget: {
+                type: 'urn:edv:documents'
+              }
+            }, {
+              referenceId: `${instance.id}-edv-authorizations`,
+              allowedAction: ['read', 'write'],
+              invoker: instance.keys.zcapKey.id,
+              delegator: instance.keys.zcapKey.id,
+              invocationTarget: {
+                type: 'urn:edv:authorizations'
+              }
+            }, {
+              referenceId: `${instance.id}-key-assertionMethod`,
+              // string should match KMS ops
+              allowedAction: 'sign',
+              invoker: instance.keys.zcapKey.id,
+              delegator: instance.keys.zcapKey.id,
+              invocationTarget: {
+                type: 'Ed25519VerificationKey2018',
+                proofPurpose: 'assertionMethod'
+              }
+            }, {
+              referenceId: `${instance.id}-key-authorizations`,
+              allowedAction: ['read', 'write'],
+              invoker: instance.keys.zcapKey.id,
+              delegator: instance.keys.zcapKey.id,
+              invocationTarget: {
+                type: 'urn:webkms:authorizations'
+              }
+            }]
+          }
+        }
+      }
+    });
+    if(!webCredential) {
+      // no response from user
+      console.log('credential request canceled/denied');
+      return null;
+    }
+
+    // destructure to get presentation
+    const {data: presentation} = webCredential;
+
+    console.log('presentation', presentation);
+    return presentation;
+  } catch(e) {
+    console.error(e);
+  }
+}
