@@ -8,7 +8,6 @@ import {getCapability, getControllerKey} from './utils.js';
 import {EdvClient} from 'edv-client';
 import {SECURITY_CONTEXT_V2_URL, sign, suites} from 'jsonld-signatures';
 import {CapabilityDelegation} from 'ocapld';
-import {default as Collection} from './Collection.js';
 const {Ed25519Signature2018} = suites;
 
 const route = '/vc-issuer/instances';
@@ -97,11 +96,6 @@ export async function delegateCapabilities({account, instance, user}) {
     zcaps.push(delegated);
   }
   user.zcaps = zcaps;
-
-  // update user
-  const users = await Collection.getInstance(
-    {type: 'User', instance, account});
-  await users.update({item: user});
 
   // FIXME: if the `user` was already claimed, we need to update/revoke
   // existing zcaps for their account; we need an endpoint for this
