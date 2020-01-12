@@ -37,9 +37,11 @@ export async function delegateCapabilities({account, instance, user}) {
   // get account's zcaps
   const refs = {
     store: `${instance.id}-edv-configuration`,
-    issue: `${instance.id}-key-assertionMethod`
+    issue: `${instance.id}-key-assertionMethod`,
+    kak: `${instance.id}-kak`,
+    hmac: `${instance.id}-hmac`
   };
-  const [store, issue] = await Promise.all(Object.values(refs).map(
+  const [store, issue, kak, hmac] = await Promise.all(Object.values(refs).map(
     referenceId => getCapability({referenceId, controller: account.id})));
 
   // map what are essentially permissions to the appropriate capabilities
@@ -58,8 +60,8 @@ export async function delegateCapabilities({account, instance, user}) {
   }
 
   if(zcapMap.read || zcapMap.write) {
-    zcapMap.kak = instance.keys.kak;
-    zcapMap.hmac = instance.keys.hmac;
+    zcapMap.kak = kak;
+    zcapMap.hmac = hmac;
   }
 
   // delegate zcaps, each type in `zcapMap` using account's `controllerKey`
@@ -85,18 +87,10 @@ export async function delegateCapabilities({account, instance, user}) {
       delegator,
       // FIXME: ensure ocapld.js checks allowedActions when verifying
       // delegation chains
-      allowedAction: ALLOWED_ACTIONS[type]
+      allowedAction: ALLOWED_ACTIONS[type],
+      referenceId: parent.referenceId,
+      invocationTarget: {...parent.invocationTarget}
     };
-    if(type === 'kak' || type === 'hmac') {
-      zcap.referenceId = `${instance.id}-${type}`;
-      zcap.invocationTarget = {
-        id: parent.id,
-        type: parent.type
-      };
-    } else {
-      zcap.referenceId = parent.referenceId;
-      zcap.invocationTarget = {...parent.invocationTarget};
-    }
     const delegated = await _delegate({zcap, signer: controllerKey});
     zcaps.push(delegated);
   }
