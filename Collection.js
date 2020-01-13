@@ -62,7 +62,10 @@ export default class Collection {
   }
 
   async update({item, meta}) {
-    if(!item || (item.type !== this.type)) {
+    if(!(item && typeof item === 'object')) {
+      throw new TypeError(`"item" must be an object.`);
+    }
+    if(item.type !== this.type) {
       throw new TypeError(`"item.type" (${item.type}) must be "${this.type}".`);
     }
     const {account, instance, capability} = this;
