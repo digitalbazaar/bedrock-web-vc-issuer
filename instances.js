@@ -27,9 +27,19 @@ export async function get({id}) {
 
 export async function getAll({controller} = {}) {
   const instanceIds = await _getInstanceIds({id: controller});
+  const promises = instanceIds.map(async id => {
+    try {
+      const instance = await get({id});
+      return instance;
+    } catch(e) {
+      console.log(`Unable to fetch issuer: "${id}"`);
+      console.error(e);
+    }
+  });
+  // Resolve promises and filter out undefined
   // FIXME: Consider pulling in promises lib to limit concurrency
-  const promises = instanceIds.map(async id => get({id}));
-  return Promise.all(promises);
+  const instances = await Promise.all(promises);
+  return instances.filter(promise => promise);
 }
 
 export async function remove({id}) {
