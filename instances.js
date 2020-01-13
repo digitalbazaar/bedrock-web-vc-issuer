@@ -26,13 +26,10 @@ export async function get({id}) {
 }
 
 export async function getAll({controller} = {}) {
-  const url = route;
-  const params = {};
-  if(controller) {
-    params.controller = controller;
-  }
-  const response = await axios.get(url, {params});
-  return response.data;
+  const instanceIds = await _getInstanceIds({id: controller});
+  // FIXME: Consider pulling in promises lib to limit concurrency
+  const promises = instanceIds.map(async id => get({id}));
+  return Promise.all(promises);
 }
 
 export async function remove({id}) {
@@ -46,6 +43,24 @@ export async function remove({id}) {
     }
     throw e;
   }
+}
+
+export async function _getInstanceIds({id}) {
+  const zcaps = await getCapabilities({id});
+  const ids = [];
+  zcaps.forEach(({referenceId}) => {
+    // assumes instance ids are 36 characters and prepended on referenceId
+    const instanceId = referenceId.slice(0, 36);
+    if(!ids.includes(instanceId)) {
+      ids.push(instanceId);
+    }
+  });
+  return ids;
+}
+
+export async function getCapabilities({id}) {
+  const {data} = await axios.get(`/zcaps?controller=${encodeURIComponent(id)}`);
+  return data;
 }
 
 export async function requestCapabilities({instance}) {
