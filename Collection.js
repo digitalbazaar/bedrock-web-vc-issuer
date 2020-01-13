@@ -62,7 +62,7 @@ export default class Collection {
   }
 
   async update({item, meta}) {
-    if(item.type !== this.type) {
+    if(!item || (item.type !== this.type)) {
       throw new TypeError(`"item.type" (${item.type}) must be "${this.type}".`);
     }
     const {account, instance, capability} = this;
@@ -73,9 +73,6 @@ export default class Collection {
     const updatedDoc = {
       ...doc
     };
-    if(item) {
-      updatedDoc.content = item;
-    }
     if(meta) {
       updatedDoc.meta = meta;
     }
