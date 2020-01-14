@@ -24,6 +24,9 @@ export default class Collection {
   }
 
   async create({item, meta}) {
+    if(!(item && typeof item === 'object')) {
+      throw new TypeError(`"item" must be an object.`);
+    }
     if(item.type !== this.type) {
       throw new TypeError(`"item.type" (${item.type}) must be "${this.type}".`);
     }
