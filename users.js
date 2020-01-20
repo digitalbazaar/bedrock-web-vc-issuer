@@ -96,11 +96,15 @@ export async function delegateCapabilities({account, instance, user}) {
   }
   user.zcaps = zcaps;
 
-  // FIXME: if the `user` was already claimed, we need to update/revoke
-  // existing zcaps for their account; we need an endpoint for this
-  // that will reprocess the `user` object
-
   return user;
+}
+
+export async function updateCapabilitySet({instanceId, userId}) {
+  const url =
+    `${route}/${encodeURIComponent(instanceId)}/users/` +
+    `${encodeURIComponent(userId)}/delegate-capabilities`;
+  const response = await axios.post(url);
+  return response.data;
 }
 
 async function _delegate({zcap, signer}) {
