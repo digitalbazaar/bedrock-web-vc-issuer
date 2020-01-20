@@ -102,7 +102,15 @@ export async function delegateCapabilities({account, instance, user}) {
 export async function updateCapabilitySet({instanceId, userId}) {
   const url =
     `${route}/${encodeURIComponent(instanceId)}/users/` +
-    `${encodeURIComponent(userId)}/delegate-capabilities`;
+    `${encodeURIComponent(userId)}/capabilities`;
+  const response = await axios.post(url);
+  return response.data;
+}
+
+export async function removeCapabilitySet({instanceId, userId}) {
+  const url =
+    `${route}/${encodeURIComponent(instanceId)}/users/` +
+    `${encodeURIComponent(userId)}/capabilities`;
   const response = await axios.post(url);
   return response.data;
 }
