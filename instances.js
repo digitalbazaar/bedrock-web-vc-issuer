@@ -78,12 +78,12 @@ export async function requestCapabilities({instance}) {
                 type: 'urn:edv:documents'
               }
             }, {
-              referenceId: `${instance.id}-edv-authorizations`,
+              referenceId: `${instance.id}-edv-revocations`,
               allowedAction: ['read', 'write'],
               invoker: instance.keys.zcapKey.id,
               delegator: instance.keys.zcapKey.id,
               invocationTarget: {
-                type: 'urn:edv:authorizations'
+                type: 'urn:edv:revocations'
               }
             }, {
               referenceId: `${instance.id}-key-assertionMethod`,
@@ -96,12 +96,12 @@ export async function requestCapabilities({instance}) {
                 proofPurpose: 'assertionMethod'
               }
             }, {
-              referenceId: `${instance.id}-key-authorizations`,
+              referenceId: `${instance.id}-key-revocations`,
               allowedAction: ['read', 'write'],
               invoker: instance.keys.zcapKey.id,
               delegator: instance.keys.zcapKey.id,
               invocationTarget: {
-                type: 'urn:webkms:authorizations'
+                type: 'urn:webkms:revocations'
               }
             }]
           }
