@@ -6,8 +6,7 @@
 //import axios from 'axios';
 
 export {
-  getControllerKey, getKeyAgreementKey, findDocuments,
-  getEdvDocument, getEdvClient
+  getCapabilityAgent, findDocuments, getEdvDocument, getEdvClient
 } from './utils.js';
 
 export {default as Collection} from './Collection.js';
