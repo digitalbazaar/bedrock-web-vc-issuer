@@ -9,7 +9,7 @@
   "dependencies": {
     "axios": "^0.18.0",
     "edv-client": "^2.0.0",
-    "webkms-client": "^1.0.0"
+    "webkms-client": "digitalbazaar/webkms-client#refactor"
   },
   "repository": {
     "type": "git",
