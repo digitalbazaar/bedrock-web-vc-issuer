@@ -5,24 +5,15 @@
 
 import axios from 'axios';
 import {EdvClient, EdvDocument} from 'edv-client';
-import {ControllerKey, KmsClient} from 'webkms-client';
+import {CapabilityAgent, KeystoreAgent} from 'webkms-client';
 
 const DEFAULT_HEADERS = {Accept: 'application/ld+json, application/json'};
-const KMS_BASE_URL = `${window.location.origin}/kms`;
 
-export async function getControllerKey({account}) {
-  const {controllerKeySeed: secret} = account;
-  const kmsClient = new KmsClient();
-  const controllerKey = await ControllerKey.fromSecret(
-    {secret, handle: account.id, kmsClient});
-  // FIXME: determine if extra layer of security will be used
-  //await _ensureKeystore({controllerKey});
-  return controllerKey;
-}
-
-export async function getKeyAgreementKey({account, instance}) {
-  const controllerKey = await getControllerKey({account});
-  return await controllerKey.getKeyAgreementKey(instance.keys.kak);
+export async function getCapabilityAgent({account}) {
+  const {capabilityAgentSeed: secret} = account;
+  const capabilityAgent = await CapabilityAgent.fromSecret(
+    {secret, handle: account.id});
+  return capabilityAgent;
 }
 
 export async function findDocuments(
@@ -46,18 +37,19 @@ export async function findDocuments(
       equals.push({'content.type': type});
     }
   }
-  const controllerKey = await getControllerKey({account});
-  const client = await getEdvClient({controllerKey, account, instance});
+  const capabilityAgent = await getCapabilityAgent({account});
+  const client = await getEdvClient({capabilityAgent, account, instance});
+  const invocationSigner = capabilityAgent.getSigner();
   const results = await client.find(
-    {equals, has, capability, invocationSigner: controllerKey});
+    {equals, has, capability, invocationSigner});
   return results;
 }
 
 export async function getEdvDocument({id, account, instance, capability}) {
-  const controllerKey = await getControllerKey({account});
-  const client = await getEdvClient({controllerKey, account, instance});
+  const capabilityAgent = await getCapabilityAgent({account});
+  const client = await getEdvClient({capabilityAgent, account, instance});
   const {keyAgreementKey, hmac} = client;
-  const invocationSigner = controllerKey;
+  const invocationSigner = capabilityAgent.getSigner();
   const recipients = [{
     header: {kid: keyAgreementKey.id, alg: 'ECDH-ES+A256KW'}
   }];
@@ -67,18 +59,19 @@ export async function getEdvDocument({id, account, instance, capability}) {
   });
 }
 
-export async function getEdvClient({controllerKey, account, instance}) {
-  if(!controllerKey) {
-    controllerKey = await getControllerKey({account});
+export async function getEdvClient({capabilityAgent, account, instance}) {
+  if(!capabilityAgent) {
+    capabilityAgent = await getCapabilityAgent({account});
   }
   const [kakZcap, hmacZcap] = await Promise.all([
     getCapability({controller: account.id, referenceId: `${instance.id}-kak`}),
     getCapability({controller: account.id, referenceId: `${instance.id}-hmac`})
   ]);
+  const keystoreAgent = new KeystoreAgent({capabilityAgent});
   const [keyAgreementKey, hmac] = await Promise.all([
-    controllerKey.getKeyAgreementKey(
+    keystoreAgent.getKeyAgreementKey(
       {...instance.keys.kak, capability: kakZcap}),
-    controllerKey.getHmac(
+    keystoreAgent.getHmac(
       {...instance.keys.hmac, capability: hmacZcap})
   ]);
   const client = new EdvClient({keyResolver, keyAgreementKey, hmac});
@@ -114,41 +107,6 @@ export async function getCapability({referenceId, controller}) {
     }
     throw e;
   }
-}
-
-async function _createKeystore({controllerKey, referenceId} = {}) {
-  // create keystore
-  const config = {
-    sequence: 0,
-    controller: controllerKey.id,
-    // TODO: add `invoker` and `delegator` using arrays including
-    // controllerKey.id *and* identifier for backup key recovery entity
-    invoker: controllerKey.id,
-    delegator: controllerKey.id
-  };
-  if(referenceId) {
-    config.referenceId = referenceId;
-  }
-  return await KmsClient.createKeystore({
-    url: `${KMS_BASE_URL}/keystores`,
-    config
-  });
-}
-
-async function _ensureKeystore({controllerKey}) {
-  let config = await KmsClient.findKeystore({
-    url: `${KMS_BASE_URL}/keystores`,
-    controller: controllerKey.id,
-    referenceId: 'primary'
-  });
-  if(config === null) {
-    config = await _createKeystore({controllerKey, referenceId: 'primary'});
-  }
-  if(config === null) {
-    return null;
-  }
-  controllerKey.kmsClient.keystore = config.id;
-  return config;
 }
 
 // FIXME: make more restrictive, support `did:key` and `did:v1`
