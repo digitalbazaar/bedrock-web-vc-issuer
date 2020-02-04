@@ -4,7 +4,7 @@
 'use strict';
 
 import axios from 'axios';
-import {getCapability, getControllerKey} from './utils.js';
+import {getCapability, getCapabilityAgent} from './utils.js';
 import {EdvClient} from 'edv-client';
 import {SECURITY_CONTEXT_V2_URL, sign, suites} from 'jsonld-signatures';
 import {CapabilityDelegation} from 'ocapld';
@@ -64,12 +64,11 @@ export async function delegateCapabilities({account, instance, user}) {
     zcapMap.hmac = hmac;
   }
 
-  // delegate zcaps, each type in `zcapMap` using account's `controllerKey`
-  // FIXME: consider using a KMS zcapKey for the `account` that is controlled
-  // by the `controllerKey` in the future for another layer of security
-  const controllerKey = await getControllerKey({account});
+  // delegate zcaps, each type in `zcapMap` using account's `capabilityAgent`
+  const capabilityAgent = await getCapabilityAgent({account});
   const invoker = `urn:uuid:${user.id}`;
   const delegator = invoker;
+  const signer = capabilityAgent.getSigner();
   const zcaps = [];
   for(const type in zcapMap) {
     const parent = zcapMap[type];
@@ -91,7 +90,7 @@ export async function delegateCapabilities({account, instance, user}) {
       referenceId: parent.referenceId,
       invocationTarget: {...parent.invocationTarget}
     };
-    const delegated = await _delegate({zcap, signer: controllerKey});
+    const delegated = await _delegate({zcap, signer});
     zcaps.push(delegated);
   }
   user.zcaps = zcaps;
