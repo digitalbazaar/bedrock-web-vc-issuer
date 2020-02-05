@@ -98,6 +98,12 @@ export async function delegateCapabilities({account, instance, user}) {
   return user;
 }
 
+export async function getCapabilitySets({accountId}) {
+  const url = '/vc-issuer/capabilities';
+  const response = await axios.get(url, {params: {account: accountId}});
+  return response.data;
+}
+
 export async function updateCapabilitySet({instanceId, userId}) {
   const url =
     `${route}/${encodeURIComponent(instanceId)}/users/` +
