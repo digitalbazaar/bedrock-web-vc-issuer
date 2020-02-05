@@ -4,6 +4,7 @@
 'use strict';
 
 import axios from 'axios';
+import {getCapabilitySets} from './users.js';
 
 const route = '/vc-issuer/instances';
 
@@ -26,7 +27,7 @@ export async function get({id}) {
 }
 
 export async function getAll({controller} = {}) {
-  const instanceIds = await _getInstanceIds({id: controller});
+  const instanceIds = await _getInstanceIds({accountId: controller});
   const promises = instanceIds.map(async id => {
     try {
       const instance = await get({id});
@@ -55,22 +56,9 @@ export async function remove({id}) {
   }
 }
 
-export async function _getInstanceIds({id}) {
-  const zcaps = await getCapabilities({id});
-  const ids = [];
-  zcaps.forEach(({referenceId}) => {
-    // assumes instance ids are 36 characters and prepended on referenceId
-    const instanceId = referenceId.slice(0, 36);
-    if(!ids.includes(instanceId)) {
-      ids.push(instanceId);
-    }
-  });
-  return ids;
-}
-
-export async function getCapabilities({id}) {
-  const {data} = await axios.get(`/zcaps?controller=${encodeURIComponent(id)}`);
-  return data;
+export async function _getInstanceIds({accountId}) {
+  const capabilitySets = await getCapabilitySets({accountId});
+  return capabilitySets.map(({instance}) => instance);
 }
 
 export async function requestCapabilities({instance}) {
