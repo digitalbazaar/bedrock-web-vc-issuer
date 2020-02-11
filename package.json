@@ -9,8 +9,8 @@
   "dependencies": {
     "axios": "^0.18.0",
     "edv-client": "^2.0.0",
-    "ocapld": "^1.6.1",
-    "webkms-client": "digitalbazaar/webkms-client#refactor"
+    "ocapld": "^1.7.0",
+    "webkms-client": "^2.0.1"
   },
   "repository": {
     "type": "git",
