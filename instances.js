@@ -38,7 +38,12 @@ export async function create({options}) {
       profileAgent.zcaps.profileCapabilityInvocationKey
   };
 
-  // get zcaps for each EDV and the keys to use it
+  // TODO: these zcaps for full access to these EDVs by the profileAgent
+  // should really only be created on demand -- where the function call to
+  // get them (+lazy delegation) requires an optional param that is the
+  // profileAgent's powerful zcap to use the profile's zcap key
+
+  // get zcaps for each EDV and the profile's keys (hmac/KAK) as a recipient
   const edvs = ['users', 'credentials'];
   for(const edv of edvs) {
     // get zcaps from presentation based on reference ID
@@ -53,11 +58,6 @@ export async function create({options}) {
     // create keys for accessing users and credentials EDVs
     const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
       {invocationSigner, kmsClient});
-
-    // TODO: these zcaps for full access to these EDVs by the profileAgent
-    // should really only be created on demand -- where the function call to
-    // get them (+lazy delegation) requires an optional param that is the
-    // profileAgent's powerful zcap to use the profile's zcap key
 
     // delegate zcaps to enable profile agent to access EDV
     const {zcaps} = await profileManager.delegateEdvCapabilities({
