@@ -32,54 +32,50 @@ export async function create({options}) {
   const {invocationSigner, kmsClient} = await profileManager.getProfileSigner(
     {profileAgent});
 
-  // get zcaps from presentation based on reference ID
-  for(const zcaps of presentation.capability) {
-    // TODO: get zcaps based on `referenceId`
-  }
-
-  // TODO: create edv clients? what is needed to delegate zcaps... seems
-  // like we'd just pass `parentCapability`
-
-  // TODO: these zcaps for full access to these EDVs by the profileAgent
-  // should really only be created on demand -- where the function call to
-  // get them (+lazy delegation) requires an optional param that is the
-  // profileAgent's powerful zcap to use the profile's zcap key
-
-  // delegate zcaps to enable profile agent to access users EDV
-  const {zcaps: usersEdvZcaps} = await profileManager
-    .delegateEdvCapabilities({
-      edvClient,
-      invocationSigner,
-      profileAgentId,
-      referenceId: `${instance.id}-edv-users`,
-    });
-
-  // delegate zcaps to enable profile agent to access credentials EDV
-  const {zcaps: credentialsEdvZcaps} = await profileManager
-    .delegateEdvCapabilities({
-      edvClient: credentialsEdvClient,
-      invocationSigner,
-      profileAgentId,
-      referenceId: `${instance.id}-edv-credentials`
-    });
-
   // assemble the zcaps to include in the profile agent's user document
   const profileAgentZcaps = {
     [profileAgent.zcaps.profileCapabilityInvocationKey.referenceId]:
       profileAgent.zcaps.profileCapabilityInvocationKey
   };
 
-  // capablities to enable the profile agent to use the profile's users EDV
-  for(const capability of usersEdvZcaps) {
-    profileAgentZcaps[capability.referenceId] = capability;
+  // get zcaps for each EDV and the keys to use it
+  const edvs = ['users', 'credentials'];
+  for(const edv of edvs) {
+    // get zcaps from presentation based on reference ID
+    const edvZcapId = `${instance.id}-edv-${edv}`;
+    const revokeZcapId = `${instance.id}-edv-${edv}-revocations`;
+    const {capability: capabilities} = presentation;
+    const parentCapabilities = {
+      edv: _findZcap({capabilities, referenceId: edvZcapId}),
+      edvRevocations: _findZcap({capabilities, referenceId: revokeZcapId})
+    };
+
+    // create keys for accessing users and credentials EDVs
+    const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
+      {invocationSigner, kmsClient});
+
+    // TODO: these zcaps for full access to these EDVs by the profileAgent
+    // should really only be created on demand -- where the function call to
+    // get them (+lazy delegation) requires an optional param that is the
+    // profileAgent's powerful zcap to use the profile's zcap key
+
+    // delegate zcaps to enable profile agent to access EDV
+    const {zcaps} = await profileManager.delegateEdvCapabilities({
+      parentCapabilities,
+      hmac,
+      keyAgreementKey,
+      invocationSigner,
+      profileAgentId,
+      referenceId: `${instance.id}-edv-users`,
+    });
+
+    // capablities to enable the profile agent to use the profile's users EDV
+    for(const capability of zcaps) {
+      profileAgentZcaps[capability.referenceId] = capability;
+    }
   }
 
-  // capabilities to enable the profile agent to use the profile's
-  // credentials EDV
-  for(const capability of credentialsEdvZcaps) {
-    profileAgentZcaps[capability.referenceId] = capability;
-  }
-
+  // TODO: no `edvClient` what to do?
   const profileDocumentReferenceId = `${instance.id}-profile-doc`;
   const {profileAgentUserDocumentDetails} = await profileManager
     .initializeAccessManagement({
@@ -231,4 +227,8 @@ export async function requestCapabilities({instance}) {
   } catch(e) {
     console.error(e);
   }
+}
+
+function _findZcap({zcaps, referenceId}) {
+  return zcaps.find(({referenceId: id}) => id === referenceId);
 }
