@@ -2,6 +2,7 @@
  * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
 import axios from 'axios';
+import {EdvClient} from 'edv-client';
 
 const route = '/vc-issuer/instances';
 
@@ -59,11 +60,19 @@ export async function create({options}) {
     const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
       {invocationSigner, kmsClient});
 
+    const edvClient = new EdvClient({
+      // FIXME: can id be provided?
+      // id: config.id,
+      // FIXME: is keyResolver required
+      // keyResolver,
+      keyAgreementKey,
+      hmac,
+    });
+
     // delegate zcaps to enable profile agent to access EDV
     const {zcaps} = await profileManager.delegateEdvCapabilities({
+      edvClient,
       parentCapabilities,
-      hmac,
-      keyAgreementKey,
       invocationSigner,
       profileAgentId,
       referenceId: `${instance.id}-edv-users`,
