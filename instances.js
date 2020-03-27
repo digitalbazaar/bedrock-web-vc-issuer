@@ -24,15 +24,26 @@ export async function create({options}) {
     return;
   }
 
+  // TODO: validate presentation (ensure it matches request and has the
+  // zcaps with the appropriate reference IDs, etc.)
+
   // TODO: verify presentation via backend call
 
   const {invocationSigner, kmsClient} = await profileManager.getProfileSigner(
     {profileAgent});
 
-  // TODO: get zcaps from presentation based on reference ID
+  // get zcaps from presentation based on reference ID
+  for(const zcaps of presentation.capability) {
+    // TODO: get zcaps based on `referenceId`
+  }
 
   // TODO: create edv clients? what is needed to delegate zcaps... seems
   // like we'd just pass `parentCapability`
+
+  // TODO: these zcaps for full access to these EDVs by the profileAgent
+  // should really only be created on demand -- where the function call to
+  // get them (+lazy delegation) requires an optional param that is the
+  // profileAgent's powerful zcap to use the profile's zcap key
 
   // delegate zcaps to enable profile agent to access users EDV
   const {zcaps: usersEdvZcaps} = await profileManager
@@ -146,9 +157,13 @@ export async function requestCapabilities({instance}) {
       web: {
         VerifiablePresentation: {
           query: {
+            // TODO: need to add a mechanism to this query language to
+            // indicate whether an existing or new EDVs/keys should be
+            // created before being given these zcaps ... perhaps a
+            // layer where "provision X+give me a zcap for it" query is needed
             type: 'OcapLdQuery',
             capabilityQuery: [{
-              referenceId: `${instance.id}-edv-configuration`,
+              referenceId: `${instance.id}-edv-users`,
               allowedAction: ['read', 'write'],
               invoker: instance.keys.zcapKey.id,
               delegator: instance.keys.zcapKey.id,
@@ -156,7 +171,7 @@ export async function requestCapabilities({instance}) {
                 type: 'urn:edv:documents'
               }
             }, {
-              referenceId: `${instance.id}-edv-revocations`,
+              referenceId: `${instance.id}-edv-users-revocations`,
               allowedAction: ['read', 'write'],
               invoker: instance.keys.zcapKey.id,
               delegator: instance.keys.zcapKey.id,
@@ -164,7 +179,23 @@ export async function requestCapabilities({instance}) {
                 type: 'urn:edv:revocations'
               }
             }, {
-              referenceId: `${instance.id}-key-assertionMethod`,
+              referenceId: `${instance.id}-edv-credentials`,
+              allowedAction: ['read', 'write'],
+              invoker: instance.keys.zcapKey.id,
+              delegator: instance.keys.zcapKey.id,
+              invocationTarget: {
+                type: 'urn:edv:documents'
+              }
+            }, {
+              referenceId: `${instance.id}-edv-credentials-revocations`,
+              allowedAction: ['read', 'write'],
+              invoker: instance.keys.zcapKey.id,
+              delegator: instance.keys.zcapKey.id,
+              invocationTarget: {
+                type: 'urn:edv:revocations'
+              }
+            }, {
+              referenceId: `${instance.id}-issue-key-assertionMethod`,
               // string should match KMS ops
               allowedAction: 'sign',
               invoker: instance.keys.zcapKey.id,
@@ -174,7 +205,7 @@ export async function requestCapabilities({instance}) {
                 proofPurpose: 'assertionMethod'
               }
             }, {
-              referenceId: `${instance.id}-key-revocations`,
+              referenceId: `${instance.id}-issue-key-revocations`,
               allowedAction: ['read', 'write'],
               invoker: instance.keys.zcapKey.id,
               delegator: instance.keys.zcapKey.id,
