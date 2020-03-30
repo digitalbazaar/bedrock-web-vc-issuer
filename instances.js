@@ -23,7 +23,7 @@ const route = '/vc-issuer/instances';
 export async function create({profileManager, options}) {
   // create the instance as a profile
   // FIXME: rename `profileSettings` to `profile`
-  const {profileAgent, profileSettings: instance} =
+  const {profileAgent, profileId} =
     await profileManager.createProfile({
       content: {
         name: options.name,
@@ -31,7 +31,8 @@ export async function create({profileManager, options}) {
         config: {}
       }
     });
-  const {id: profileAgentId, profile: profileId} = profileAgent;
+  const {id: profileAgentId} = profileAgent;
+  const instance = {id: profileId, ...options};
   console.log('instance', instance);
 
   // request capabilities for the instance
@@ -100,21 +101,20 @@ export async function create({profileManager, options}) {
     }
   }
 
-  /*
   const profileDocumentReferenceId = `${instance.id}-profile-doc`;
   const {profileAgentUserDocumentDetails} = await profileManager
     .initializeAccessManagement({
-      profileAgentDetails,
+      // TODO: get initial manager information
+      profileAgentDetails: {name: 'root'},
       profileAgentId,
       profileAgentZcaps,
-      profileDetails,
+      profileDetails: options,
       profileDocumentReferenceId,
       profileId
     });
 
   // update zcaps on profileAgent instance
   profileAgent.zcaps = profileAgentUserDocumentDetails.zcaps;
-  */
 
   // TODO: should assign profile agent to current logged in account
 
