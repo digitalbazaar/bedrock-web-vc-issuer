@@ -4,6 +4,20 @@
 import axios from 'axios';
 import {EdvClient} from 'edv-client';
 
+// import {EdvClient} from 'edv-client';
+// import {SECURITY_CONTEXT_V2_URL, sign, suites} from 'jsonld-signatures';
+// import {CapabilityDelegation} from 'ocapld';
+// const {Ed25519Signature2018} = suites;
+//
+// const route = '/vc-issuer/instances';
+//
+// const ALLOWED_ACTIONS = {
+//   read: ['read'],
+//   write: ['read', 'write'],
+//   issue: ['sign']
+// };
+
+
 const route = '/vc-issuer/instances';
 
 export async function create({profileManager, options}) {
@@ -158,6 +172,74 @@ export async function remove({id}) {
     throw e;
   }
 }
+/*
+export async function delegateCapabilities({instanceId, user}) {
+  // TODO: fix data model for these: ["Read", "Issue", "Revoke"]
+  const {capabilities} = user;
+
+  // get account's zcaps
+  const refs = {
+    store: `${instance.id}-edv-configuration`,
+    issue: `${instance.id}-key-assertionMethod`,
+    kak: `${instance.id}-kak`,
+    hmac: `${instance.id}-hmac`
+  };
+  const [store, issue, kak, hmac] = await Promise.all(Object.values(refs).map(
+    referenceId => getCapability({referenceId, controller: account.id})));
+
+  // map what are essentially permissions to the appropriate capabilities
+  const zcapMap = {};
+  if(capabilities.includes('Issue')) {
+    zcapMap.issue = issue;
+    if(capabilities.includes('Read') || capabilities.includes('Revoke')) {
+      // covers both read and write to vault
+      zcapMap.write = store;
+    }
+  } else if(capabilities.includes('Revoke')) {
+    // covers both read and write to vault
+    zcapMap.write = store;
+  } else if(capabilities.includes('Read')) {
+    zcapMap.read = store;
+  }
+
+  if(zcapMap.read || zcapMap.write) {
+    zcapMap.kak = kak;
+    zcapMap.hmac = hmac;
+  }
+
+  // delegate zcaps, each type in `zcapMap` using account's `capabilityAgent`
+  const capabilityAgent = await getCapabilityAgent({account});
+  const invoker = `urn:uuid:${user.id}`;
+  const delegator = invoker;
+  const signer = capabilityAgent.getSigner();
+  const zcaps = [];
+  for(const type in zcapMap) {
+    const parent = zcapMap[type];
+    if(parent === null) {
+      // no parent zcap for what is being delegated
+      throw new Error('Permission Denied.');
+    }
+    // delegate zcap
+    const zcap = {
+      '@context': SECURITY_CONTEXT_V2_URL,
+      // use 128-bit random multibase encoded value
+      id: `urn:zcap:${await EdvClient.generateId()}`,
+      parentCapability: parent.id,
+      invoker,
+      delegator,
+      // FIXME: ensure ocapld.js checks allowedActions when verifying
+      // delegation chains
+      allowedAction: ALLOWED_ACTIONS[type],
+      referenceId: parent.referenceId,
+      invocationTarget: {...parent.invocationTarget}
+    };
+    const delegated = await _delegate({zcap, signer});
+    zcaps.push(delegated);
+  }
+  user.zcaps = zcaps;
+
+  return user;
+}*/
 
 export async function requestCapabilities({instance}) {
   console.log('request credential issuance capabilities...');
@@ -173,22 +255,17 @@ export async function requestCapabilities({instance}) {
             type: 'OcapLdQuery',
             capabilityQuery: [{
               referenceId: `${instance.id}-edv-users`,
+              revocationReferenceId: `${instance.id}-edv-users-revocations`,
               allowedAction: ['read', 'write'],
               invoker: instance.id,
               delegator: instance.id,
               invocationTarget: {
                 type: 'urn:edv:documents'
-              }
-            }, {
-              referenceId: `${instance.id}-edv-users-revocations`,
-              allowedAction: ['read', 'write'],
-              invoker: instance.id,
-              delegator: instance.id,
-              invocationTarget: {
-                type: 'urn:edv:revocations'
               }
             }, {
               referenceId: `${instance.id}-edv-credentials`,
+              revocationReferenceId:
+                `${instance.id}-edv-credentials-revocations`,
               allowedAction: ['read', 'write'],
               invoker: instance.id,
               delegator: instance.id,
@@ -196,15 +273,9 @@ export async function requestCapabilities({instance}) {
                 type: 'urn:edv:documents'
               }
             }, {
-              referenceId: `${instance.id}-edv-credentials-revocations`,
-              allowedAction: ['read', 'write'],
-              invoker: instance.id,
-              delegator: instance.id,
-              invocationTarget: {
-                type: 'urn:edv:revocations'
-              }
-            }, {
-              referenceId: `${instance.id}-issue-key-assertionMethod`,
+              referenceId: `${instance.id}-key-assertionMethod`,
+              revocationReferenceId:
+                `${instance.id}-key-assertionMethod-revocations`,
               // string should match KMS ops
               allowedAction: 'sign',
               invoker: instance.id,
@@ -212,14 +283,6 @@ export async function requestCapabilities({instance}) {
               invocationTarget: {
                 type: 'Ed25519VerificationKey2018',
                 proofPurpose: 'assertionMethod'
-              }
-            }, {
-              referenceId: `${instance.id}-issue-key-revocations`,
-              allowedAction: ['read', 'write'],
-              invoker: instance.id,
-              delegator: instance.id,
-              invocationTarget: {
-                type: 'urn:webkms:revocations'
               }
             }]
           }
