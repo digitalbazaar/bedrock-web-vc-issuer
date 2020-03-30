@@ -100,13 +100,10 @@ export async function create({profileManager, options}) {
     }
   }
 
-  // TODO: no `edvClient` what to do?
   /*
   const profileDocumentReferenceId = `${instance.id}-profile-doc`;
   const {profileAgentUserDocumentDetails} = await profileManager
     .initializeAccessManagement({
-      edvClient,
-      invocationSigner,
       profileAgentDetails,
       profileAgentId,
       profileAgentZcaps,
