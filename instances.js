@@ -8,14 +8,17 @@ const route = '/vc-issuer/instances';
 
 export async function create({profileManager, options}) {
   // create the instance as a profile
-  const {profileAgent, profile: instance} = await profileManager.createProfile({
-    content: {
-      name: options.name,
-      // TODO: support instance configurations
-      config: {}
-    }
-  });
+  // FIXME: rename `profileSettings` to `profile`
+  const {profileAgent, profileSettings: instance} =
+    await profileManager.createProfile({
+      content: {
+        name: options.name,
+        // TODO: support instance configurations
+        config: {}
+      }
+    });
   const {id: profileAgentId, profile: profileId} = profileAgent;
+  console.log('instance', instance);
 
   // request capabilities for the instance
   const presentation = await requestCapabilities({instance});
@@ -171,32 +174,32 @@ export async function requestCapabilities({instance}) {
             capabilityQuery: [{
               referenceId: `${instance.id}-edv-users`,
               allowedAction: ['read', 'write'],
-              invoker: instance.keys.zcapKey.id,
-              delegator: instance.keys.zcapKey.id,
+              invoker: instance.id,
+              delegator: instance.id,
               invocationTarget: {
                 type: 'urn:edv:documents'
               }
             }, {
               referenceId: `${instance.id}-edv-users-revocations`,
               allowedAction: ['read', 'write'],
-              invoker: instance.keys.zcapKey.id,
-              delegator: instance.keys.zcapKey.id,
+              invoker: instance.id,
+              delegator: instance.id,
               invocationTarget: {
                 type: 'urn:edv:revocations'
               }
             }, {
               referenceId: `${instance.id}-edv-credentials`,
               allowedAction: ['read', 'write'],
-              invoker: instance.keys.zcapKey.id,
-              delegator: instance.keys.zcapKey.id,
+              invoker: instance.id,
+              delegator: instance.id,
               invocationTarget: {
                 type: 'urn:edv:documents'
               }
             }, {
               referenceId: `${instance.id}-edv-credentials-revocations`,
               allowedAction: ['read', 'write'],
-              invoker: instance.keys.zcapKey.id,
-              delegator: instance.keys.zcapKey.id,
+              invoker: instance.id,
+              delegator: instance.id,
               invocationTarget: {
                 type: 'urn:edv:revocations'
               }
@@ -204,8 +207,8 @@ export async function requestCapabilities({instance}) {
               referenceId: `${instance.id}-issue-key-assertionMethod`,
               // string should match KMS ops
               allowedAction: 'sign',
-              invoker: instance.keys.zcapKey.id,
-              delegator: instance.keys.zcapKey.id,
+              invoker: instance.id,
+              delegator: instance.id,
               invocationTarget: {
                 type: 'Ed25519VerificationKey2018',
                 proofPurpose: 'assertionMethod'
@@ -213,8 +216,8 @@ export async function requestCapabilities({instance}) {
             }, {
               referenceId: `${instance.id}-issue-key-revocations`,
               allowedAction: ['read', 'write'],
-              invoker: instance.keys.zcapKey.id,
-              delegator: instance.keys.zcapKey.id,
+              invoker: instance.id,
+              delegator: instance.id,
               invocationTarget: {
                 type: 'urn:webkms:revocations'
               }
