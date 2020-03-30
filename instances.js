@@ -6,9 +6,8 @@ import {EdvClient} from 'edv-client';
 
 const route = '/vc-issuer/instances';
 
-export async function create({options}) {
+export async function create({profileManager, options}) {
   // create the instance as a profile
-  const profileManager = await getProfileManager();
   const {profileAgent, profile: instance} = await profileManager.createProfile({
     content: {
       name: options.name,
@@ -85,6 +84,7 @@ export async function create({options}) {
   }
 
   // TODO: no `edvClient` what to do?
+  /*
   const profileDocumentReferenceId = `${instance.id}-profile-doc`;
   const {profileAgentUserDocumentDetails} = await profileManager
     .initializeAccessManagement({
@@ -100,6 +100,7 @@ export async function create({options}) {
 
   // update zcaps on profileAgent instance
   profileAgent.zcaps = profileAgentUserDocumentDetails.zcaps;
+  */
 
   // TODO: should assign profile agent to current logged in account
 
