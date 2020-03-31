@@ -1,9 +1,6 @@
 /*!
  * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
-import axios from 'axios';
-import {EdvClient} from 'edv-client';
-
 // import {EdvClient} from 'edv-client';
 // import {SECURITY_CONTEXT_V2_URL, sign, suites} from 'jsonld-signatures';
 // import {CapabilityDelegation} from 'ocapld';
@@ -17,17 +14,14 @@ import {EdvClient} from 'edv-client';
 //   issue: ['sign']
 // };
 
-
-const route = '/vc-issuer/instances';
-
-export async function create({profileManager, options}) {
+export async function create(
+  {profileManager, profileContent, profileAgentContent}) {
   // create the instance as a profile
   const {id: profileId} = await profileManager.createProfile();
-  const instance = {id: profileId, ...options};
-  console.log('instance', instance);
+  let instance = {id: profileId};
 
-  // request capabilities for the instance
-  const presentation = await requestCapabilities({instance, profileManager});
+  // request capabilities for the instance, including for the `user` EDV
+  const presentation = await requestCapabilities({instance});
   if(!presentation) {
     throw new Error('User aborted instance provisioning.');
     return;
@@ -38,14 +32,37 @@ export async function create({profileManager, options}) {
 
   // TODO: verify presentation via backend call
 
-  const {invocationSigner, kmsClient} = await profileManager.getProfileSigner(
-    {profileAgent});
+  // get zcaps from presentation based on reference ID
+  const {capability: capabilities} = presentation;
+  const capability = _findZcap(
+    {capabilities, referenceId: 'user-edv-documents'});
+  const revocationCapability = _findZcap(
+    {capabilities, referenceId: 'user-edv-revocations'});
 
-  // assemble the zcaps to include in the profile agent's user document
-  const profileAgentZcaps = {
-    [profileAgent.zcaps.profileCapabilityInvocationKey.referenceId]:
-      profileAgent.zcaps.profileCapabilityInvocationKey
-  };
+  // create keys for accessing `user` EDV
+  const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
+    {profileId});
+
+  // initialize access management
+  const {profile, profileAgent} = await profileManager
+    .initializeAccessManagement({
+      profileId,
+      profileContent,
+      profileAgentContent,
+      hmac,
+      keyAgreementKey,
+      capability,
+      revocationCapability,
+      indexes: [
+        {attribute: 'content.name'},
+        {attribute: 'content.email'}
+      ]
+    });
+  instance = profile;
+  let user = profileAgent;
+
+  const {invocationSigner} = await profileManager.getProfileSigner(
+    {profileId});
 
   // TODO: these zcaps for full access to these EDVs by the profileAgent
   // should really only be created on demand -- where the function call to
@@ -53,11 +70,11 @@ export async function create({profileManager, options}) {
   // profileAgent's powerful zcap to use the profile's zcap key
 
   // get zcaps for each EDV and the profile's keys (hmac/KAK) as a recipient
-  const edvs = ['users', 'credentials'];
+  const edvs = ['credential'];
   for(const edv of edvs) {
     // get zcaps from presentation based on reference ID
-    const edvZcapId = `${instance.id}-edv-${edv}`;
-    const revokeZcapId = `${instance.id}-edv-${edv}-revocations`;
+    const edvZcapId = `${edv}-edv-documents`;
+    const revokeZcapId = `${edv}-edv-revocations`;
     const {capability: capabilities} = presentation;
     const parentCapabilities = {
       edv: _findZcap({capabilities, referenceId: edvZcapId}),
@@ -66,7 +83,7 @@ export async function create({profileManager, options}) {
 
     // create keys for accessing users and credentials EDVs
     const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
-      {invocationSigner, kmsClient});
+      {profileId});
 
     // delegate zcaps to enable profile agent to access EDV
     const {zcaps} = await profileManager.delegateEdvCapabilities({
@@ -74,84 +91,23 @@ export async function create({profileManager, options}) {
       keyAgreementKey,
       parentCapabilities,
       invocationSigner,
-      profileAgentId,
-      referenceId: `${instance.id}-edv-users`,
+      profileAgentId: profileAgent.id,
+      referenceIdPrefix: edv
     });
 
     // capablities to enable the profile agent to use the profile's users EDV
     for(const capability of zcaps) {
-      profileAgentZcaps[capability.referenceId] = capability;
+      user.zcaps[capability.referenceId] = capability;
     }
   }
 
-  const profileDocumentReferenceId = `${instance.id}-profile-doc`;
-  const {profileAgentUserDocumentDetails} = await profileManager
-    .initializeAccessManagement({
-      // TODO: get initial manager information
-      profileAgentDetails: {name: 'root'},
-      profileAgentId,
-      profileAgentZcaps,
-      profileDetails: options,
-      profileDocumentReferenceId,
-      profileId
-    });
+  // update profile agent user with content and new zcaps
+  const accessManager = await profileManager.getAccessManager({profileId});
+  user = await accessManager.updateUser({user});
 
-  // update zcaps on profileAgent instance
-  profileAgent.zcaps = profileAgentUserDocumentDetails.zcaps;
-
-  // TODO: should assign profile agent to current logged in account
-
-  return {profileAgent, instance};
+  return {user, instance};
 }
 
-// TODO: remove me
-export async function setIssuer({id, controller, presentation}) {
-  // TODO: send presentation to backend for verification
-
-  // TODO: setup users EDV/etc. with instance profile (`id` is profile ID)
-  // TODO: store zcaps for accessing users/credentials EDV, issuance key, etc.
-
-  const url = `${route}/${encodeURIComponent(id)}/issuer`;
-  const response = await axios.post(url, {controller, presentation});
-  return response.data;
-}
-
-export async function get({id}) {
-  // TODO: use profile manager to do getProfile()
-  const url = `${route}/${encodeURIComponent(id)}`;
-  const response = await axios.get(url);
-  return response.data;
-}
-
-export async function getAll({controller} = {}) {
-  const instanceIds = await _getInstanceIds({accountId: controller});
-  const promises = instanceIds.map(async id => {
-    try {
-      const instance = await get({id});
-      return instance;
-    } catch(e) {
-      console.log(`Unable to fetch issuer: "${id}"`);
-      console.error(e);
-    }
-  });
-  // Resolve promises and filter out undefined
-  // FIXME: Consider pulling in promises lib to limit concurrency
-  const instances = await Promise.all(promises);
-  return instances.filter(promise => promise);
-}
-
-export async function remove({id}) {
-  const url = `${route}/${encodeURIComponent(id)}`;
-  try {
-    await axios.delete(url);
-    return true;
-  } catch(e) {
-    if(e.name === 'NotFoundError') {
-      return false;
-    }
-    throw e;
-  }
-}
 /*
 export async function delegateCapabilities({instanceId, user}) {
   // TODO: fix data model for these: ["Read", "Issue", "Revoke"]
@@ -221,10 +177,9 @@ export async function delegateCapabilities({instanceId, user}) {
   return user;
 }*/
 
-export async function requestCapabilities({instance, profileManager}) {
+export async function requestCapabilities({instance}) {
   console.log('request credential issuance capabilities...');
   try {
-    const usersEdvReferenceId = profileManager.getUsersEdvReferenceId();
     const webCredential = await navigator.credentials.get({
       web: {
         VerifiablePresentation: {
@@ -235,8 +190,8 @@ export async function requestCapabilities({instance, profileManager}) {
             // layer where "provision X+give me a zcap for it" query is needed
             type: 'OcapLdQuery',
             capabilityQuery: [{
-              referenceId: usersEdvReferenceId,
-              revocationReferenceId: `${usersEdvReferenceId}-revocations`,
+              referenceId: 'user-edv-documents',
+              revocationReferenceId: 'user-edv-revocations',
               allowedAction: ['read', 'write'],
               invoker: instance.id,
               delegator: instance.id,
@@ -244,9 +199,8 @@ export async function requestCapabilities({instance, profileManager}) {
                 type: 'urn:edv:documents'
               }
             }, {
-              referenceId: `${instance.id}-edv-credentials`,
-              revocationReferenceId:
-                `${instance.id}-edv-credentials-revocations`,
+              referenceId: `credential-edv-documents`,
+              revocationReferenceId: `credential-edv-revocations`,
               allowedAction: ['read', 'write'],
               invoker: instance.id,
               delegator: instance.id,
@@ -254,9 +208,8 @@ export async function requestCapabilities({instance, profileManager}) {
                 type: 'urn:edv:documents'
               }
             }, {
-              referenceId: `${instance.id}-key-assertionMethod`,
-              revocationReferenceId:
-                `${instance.id}-key-assertionMethod-revocations`,
+              referenceId: `key-assertionMethod`,
+              revocationReferenceId: `key-assertionMethod-revocations`,
               // string should match KMS ops
               allowedAction: 'sign',
               invoker: instance.id,
