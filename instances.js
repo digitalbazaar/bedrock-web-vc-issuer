@@ -101,6 +101,10 @@ export async function create(
     }
   }
 
+  // set default "capabilities" for user
+  // TODO: do this here or elsewhere?
+  user.capabilities = ['Admin', 'Read', 'Revoke', 'Issue'];
+
   // update profile agent user with content and new zcaps
   const accessManager = await profileManager.getAccessManager({profileId});
   user = await accessManager.updateUser({user});
