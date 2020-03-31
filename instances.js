@@ -1,11 +1,7 @@
 /*!
  * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
-// import {EdvClient} from 'edv-client';
-// import {SECURITY_CONTEXT_V2_URL, sign, suites} from 'jsonld-signatures';
-// import {CapabilityDelegation} from 'ocapld';
-// const {Ed25519Signature2018} = suites;
-//
+import {delegateCapability} from 'bedrock-web-profile-manager/utils';
 // const route = '/vc-issuer/instances';
 //
 // const ALLOWED_ACTIONS = {
@@ -38,13 +34,12 @@ export async function create(
     {capabilities, referenceId: 'user-edv-documents'});
   const revocationCapability = _findZcap(
     {capabilities, referenceId: 'user-edv-revocations'});
-  profileContent = {...profileContent};
+  profileContent = {edvs: {}, ...profileContent};
   const profileZcaps = {...profileContent.zcaps};
   for(const zcap of capabilities) {
     profileZcaps[zcap.referenceId] = zcap;
   }
   profileContent.zcaps = profileZcaps;
-
   // create keys for accessing `user` EDV
   const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
     {profileId});
@@ -67,9 +62,9 @@ export async function create(
   instance = profile;
   let user = profileAgent;
 
+  const accessManager = await profileManager.getAccessManager({profileId});
   const {invocationSigner} = await profileManager.getProfileSigner(
     {profileId});
-
   // TODO: these zcaps for full access to these EDVs by the profileAgent
   // should really only be created on demand -- where the function call to
   // get them (+lazy delegation) requires an optional param that is the
@@ -87,9 +82,27 @@ export async function create(
       edvRevocations: _findZcap({capabilities, referenceId: revokeZcapId})
     };
 
-    // create keys for accessing users and credentials EDVs
+    // create keys for accessing userEdv and credentialEdv EDVs
     const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
       {profileId});
+
+    // TODO: there should be an API in profile manager that can be used
+    // to generate this information -- and the `accessManagement` part of
+    // a profile user doc should be removed and moved to `edvs` just like
+    // any other edv, its name `user` would be understood to be special
+    profile.edvs[edv] = {
+      hmac: {id: hmac.id, type: hmac.type},
+      keyAgreementKey: {id: keyAgreementKey.id, type: keyAgreementKey.type},
+      indexes: [
+        {attribute: 'content.id', unique: true},
+        {attribute: 'content.type'}
+      ],
+      zcaps: {
+        write: edvZcapId,
+        revoke: revokeZcapId
+      }
+    };
+    await accessManager.updateUser({user: profile});
 
     // delegate zcaps to enable profile agent to access EDV
     const {zcaps} = await profileManager.delegateEdvCapabilities({
@@ -101,7 +114,7 @@ export async function create(
       referenceIdPrefix: edv
     });
 
-    // capablities to enable the profile agent to use the profile's users EDV
+    // capablities to enable the profile agent to use the profile's userEdv EDV
     for(const capability of zcaps) {
       user.zcaps[capability.referenceId] = capability;
     }
@@ -112,79 +125,34 @@ export async function create(
   user.capabilities = ['Admin', 'Read', 'Revoke', 'Issue'];
 
   // update profile agent user with content and new zcaps
-  const accessManager = await profileManager.getAccessManager({profileId});
   user = await accessManager.updateUser({user});
   return {user, instance};
 }
 
-/*
-export async function delegateCapabilities({instanceId, user}) {
-  // TODO: fix data model for these: ["Read", "Issue", "Revoke"]
-  const {capabilities} = user;
+export async function delegateCapabilities({profileManager, instance, user}) {
+  user = {...user};
 
-  // get account's zcaps
-  const refs = {
-    store: `${instance.id}-edv-configuration`,
-    issue: `${instance.id}-key-assertionMethod`,
-    kak: `${instance.id}-kak`,
-    hmac: `${instance.id}-hmac`
-  };
-  const [store, issue, kak, hmac] = await Promise.all(Object.values(refs).map(
-    referenceId => getCapability({referenceId, controller: account.id})));
-
-  // map what are essentially permissions to the appropriate capabilities
-  const zcapMap = {};
-  if(capabilities.includes('Issue')) {
-    zcapMap.issue = issue;
-    if(capabilities.includes('Read') || capabilities.includes('Revoke')) {
-      // covers both read and write to vault
-      zcapMap.write = store;
-    }
-  } else if(capabilities.includes('Revoke')) {
-    // covers both read and write to vault
-    zcapMap.write = store;
-  } else if(capabilities.includes('Read')) {
-    zcapMap.read = store;
+  const {zcaps} = await _createZcapDelegations(
+    {profileManager, instance, user});
+  for(const capability of zcaps) {
+    user.zcaps[capability.referenceId] = capability;
   }
-
-  if(zcapMap.read || zcapMap.write) {
-    zcapMap.kak = kak;
-    zcapMap.hmac = hmac;
-  }
-
-  // delegate zcaps, each type in `zcapMap` using account's `capabilityAgent`
-  const capabilityAgent = await getCapabilityAgent({account});
-  const invoker = `urn:uuid:${user.id}`;
-  const delegator = invoker;
-  const signer = capabilityAgent.getSigner();
-  const zcaps = [];
-  for(const type in zcapMap) {
-    const parent = zcapMap[type];
-    if(parent === null) {
-      // no parent zcap for what is being delegated
-      throw new Error('Permission Denied.');
-    }
-    // delegate zcap
-    const zcap = {
-      '@context': SECURITY_CONTEXT_V2_URL,
-      // use 128-bit random multibase encoded value
-      id: `urn:zcap:${await EdvClient.generateId()}`,
-      parentCapability: parent.id,
-      invoker,
-      delegator,
-      // FIXME: ensure ocapld.js checks allowedActions when verifying
-      // delegation chains
-      allowedAction: ALLOWED_ACTIONS[type],
-      referenceId: parent.referenceId,
-      invocationTarget: {...parent.invocationTarget}
-    };
-    const delegated = await _delegate({zcap, signer});
-    zcaps.push(delegated);
-  }
-  user.zcaps = zcaps;
 
   return user;
-}*/
+}
+
+export async function revokeCapabilities(
+  {profileManager, instance, user, capabilitiesToRevoke}) {
+  user = {...user};
+
+  const revokedZcaps = await _revokeZcaps(
+    {profileManager, instance, user, capabilitiesToRevoke});
+  for(const capability of revokedZcaps) {
+    delete user.zcaps[capability.referenceId];
+  }
+
+  return user;
+}
 
 export async function requestCapabilities({instance}) {
   console.log('request credential issuance capabilities...');
@@ -248,6 +216,217 @@ export async function requestCapabilities({instance}) {
   }
 }
 
+async function _createZcapDelegations({profileManager, instance, user}) {
+  const {capabilities} = user;
+  const controller = user.id;
+  const zcapRequests = [];
+  // TODO: fix data model for these: ["Read", "Issue", "Revoke", "Admin"]
+  // map what are essentially roles to the appropriate capabilities
+  if(capabilities.includes('Admin')) {
+    const userEdvRequest = await _createZcapRequestFromParent({
+      controller,
+      parentZcap: instance.zcaps['user-edv-documents'],
+      allowedAction: ['read', 'write']
+    });
+    const userEdvHmacRequest = await _createZcapRequestFromKey({
+      key: instance.accessManagement.hmac,
+      referenceId: 'user-edv-hmac',
+      controller,
+      allowedAction: 'sign'
+    });
+    const userEdvKakRequest = await _createZcapRequestFromKey({
+      key: instance.accessManagement.keyAgreementKey,
+      referenceId: 'user-edv-kak',
+      controller,
+      allowedAction: ['deriveSecret', 'sign']
+    });
+    const userEdvRevocationsRequest = await _createZcapRequestFromParent({
+      controller,
+      parentZcap: instance.zcaps['user-edv-revocations'],
+      allowedAction: ['read', 'write']
+    });
+    const credentialEdvRevocationsRequest = await _createZcapRequestFromParent({
+      controller,
+      parentZcap: instance.zcaps['credential-edv-revocations'],
+      allowedAction: ['read', 'write']
+    });
+    const issuanceRevocationsRequest = await _createZcapRequestFromParent({
+      controller,
+      parentZcap: instance.zcaps['key-assertionMethod-revocations'],
+      allowedAction: ['read', 'write']
+    });
+    const adminZcapRequests = [
+      userEdvRequest,
+      userEdvHmacRequest,
+      userEdvKakRequest,
+      userEdvRevocationsRequest,
+      credentialEdvRevocationsRequest,
+      issuanceRevocationsRequest
+    ];
+    zcapRequests.push(...adminZcapRequests);
+  }
+  if(capabilities.includes('Issue')) {
+    const issuanceRequest = await _createZcapRequestFromParent({
+      controller,
+      parentZcap: instance.zcaps['key-assertionMethod'],
+      allowedAction: 'sign'
+    });
+    const allowReadWrite = capabilities.includes('Read') ||
+      capabilities.includes('Revoke');
+    const credentialEdvRequest = await _createZcapRequestFromParent({
+      controller,
+      parentZcap: instance.zcaps['credential-edv-documents'],
+      allowedAction: allowReadWrite ? ['read', 'write'] : 'write'
+    });
+    const credentialEdvHmacRequest = await _createZcapRequestFromKey({
+      key: instance.edvs.credential.hmac,
+      referenceId: 'credential-edv-hmac',
+      controller,
+      allowedAction: 'sign'
+    });
+    const credentialEdvKakRequest = await _createZcapRequestFromKey({
+      key: instance.edvs.credential.keyAgreementKey,
+      referenceId: 'credential-edv-kak',
+      controller,
+      allowedAction: ['deriveSecret', 'sign']
+    });
+    const issuanceZcapRequests = [
+      issuanceRequest,
+      credentialEdvRequest,
+      credentialEdvHmacRequest,
+      credentialEdvKakRequest
+    ];
+    zcapRequests.push(...issuanceZcapRequests);
+  } else if(capabilities.includes('Revoke')) {
+    const credentialEdvRequest = await _createZcapRequestFromParent({
+      controller,
+      parentZcap: instance.zcaps['credential-edv-documents'],
+      allowedAction: ['read', 'write']
+    });
+    const credentialEdvHmacRequest = await _createZcapRequestFromKey({
+      key: instance.edvs.credential.hmac,
+      referenceId: 'credential-edv-hmac',
+      controller,
+      allowedAction: 'sign'
+    });
+    const credentialEdvKakRequest = await _createZcapRequestFromKey({
+      key: instance.edvs.credential.keyAgreementKey,
+      referenceId: 'credential-edv-kak',
+      controller,
+      allowedAction: ['deriveSecret', 'sign']
+    });
+    const revokeZcapRequests = [
+      credentialEdvRequest,
+      credentialEdvHmacRequest,
+      credentialEdvKakRequest
+    ];
+    zcapRequests.push(...revokeZcapRequests);
+  } else if(capabilities.includes('Read')) {
+    const credentialEdvRequest = await _createZcapRequestFromParent({
+      controller,
+      parentZcap: instance.zcaps['credential-edv-documents'],
+      allowedAction: 'read'
+    });
+    const credentialEdvHmacRequest = await _createZcapRequestFromKey({
+      key: instance.edvs.credential.hmac,
+      referenceId: 'credential-edv-hmac',
+      controller,
+      allowedAction: 'sign'
+    });
+    const credentialEdvKakRequest = await _createZcapRequestFromKey({
+      key: instance.edvs.credential.keyAgreementKey,
+      referenceId: 'credential-edv-kak',
+      controller,
+      allowedAction: ['deriveSecret', 'sign']
+    });
+    const readZcapRequests = [
+      credentialEdvRequest,
+      credentialEdvHmacRequest,
+      credentialEdvKakRequest
+    ];
+    zcapRequests.push(...readZcapRequests);
+  }
+  const {invocationSigner: signer} = await profileManager.getProfileSigner(
+    {profileId: instance.id});
+  const promises = zcapRequests.map(async request =>
+    delegateCapability({signer, request}));
+  // TODO: Use promise-fun lib to limit concurrency
+  const zcaps = await Promise.all(promises);
+  return {zcaps};
+}
+
+async function _revokeZcaps(
+  {profileManager, instance, capabilitiesToRevoke, user}) {
+  const zcapsToRevoke = [];
+  // map what are essentially roles to the appropriate capabilities
+  if(capabilitiesToRevoke.includes('Admin')) {
+    const adminZcaps = [
+      user.zcaps['user-edv-documents'],
+      user.zcaps['user-edv-hmac'],
+      user.zcaps['user-edv-kak'],
+      user.zcaps['user-edv-revocations'],
+      user.zcaps['credential-edv-revocations'],
+      user.zcaps['key-assertionMethod-revocations']
+    ];
+    zcapsToRevoke.push(...adminZcaps);
+  }
+  if(capabilitiesToRevoke.includes('Issue')) {
+    const issueZcaps = [
+      user.zcaps['key-assertionMethod'],
+      user.zcaps['credential-edv-documents'],
+      user.zcaps['credential-edv-hmac'],
+      user.zcaps['credential-edv-kak']
+    ];
+    zcapsToRevoke.push(...issueZcaps);
+  } else if(capabilitiesToRevoke.includes('Revoke') ||
+    capabilitiesToRevoke.includes('Read')) {
+    const zcaps = [
+      user.zcaps['credential-edv-documents'],
+      user.zcaps['credential-edv-hmac'],
+      user.zcaps['credential-edv-kak']
+    ];
+    zcapsToRevoke.push(...zcaps);
+  }
+  const {invocationSigner: signer} = await profileManager.getProfileSigner(
+    {profileId: instance.id});
+  const promises = zcapsToRevoke.map(async zcap => _revokeZcap({signer, zcap}));
+  // TODO: Use promise-fun lib to limit concurrency
+  await Promise.all(promises);
+  return zcapsToRevoke;
+}
+
+async function _revokeZcap({signer, zcap}) {
+  // FIME: Implement revocation of zcaps
+  return true;
+}
+
+async function _createZcapRequestFromParent(
+  {parentZcap, controller, allowedAction}) {
+  return {
+    allowedAction,
+    controller,
+    parentCapability: parentZcap,
+    invocationTarget: {...parentZcap.invocationTarget},
+    referenceId: parentZcap.referenceId,
+  };
+}
+
+async function _createZcapRequestFromKey(
+  {key, referenceId, controller, allowedAction}) {
+  return {
+    allowedAction,
+    controller,
+    referenceId,
+    invocationTarget: {
+      id: key.id,
+      type: key.type,
+      verificationMethod: key.id
+    },
+    parentCapability: key.id
+  };
+}
+
 function _findZcap({capabilities, referenceId}) {
   return capabilities.find(({referenceId: id}) => id === referenceId);
 }
+
