@@ -22,21 +22,12 @@ const route = '/vc-issuer/instances';
 
 export async function create({profileManager, options}) {
   // create the instance as a profile
-  // FIXME: rename `profileSettings` to `profile`
-  const {profileAgent, profileId} =
-    await profileManager.createProfile({
-      content: {
-        name: options.name,
-        // TODO: support instance configurations
-        config: {}
-      }
-    });
-  const {id: profileAgentId} = profileAgent;
+  const {id: profileId} = await profileManager.createProfile();
   const instance = {id: profileId, ...options};
   console.log('instance', instance);
 
   // request capabilities for the instance
-  const presentation = await requestCapabilities({instance});
+  const presentation = await requestCapabilities({instance, profileManager});
   if(!presentation) {
     throw new Error('User aborted instance provisioning.');
     return;
@@ -77,18 +68,10 @@ export async function create({profileManager, options}) {
     const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
       {invocationSigner, kmsClient});
 
-    const edvClient = new EdvClient({
-      // FIXME: can id be provided?
-      // id: config.id,
-      // FIXME: is keyResolver required
-      // keyResolver,
-      keyAgreementKey,
-      hmac,
-    });
-
     // delegate zcaps to enable profile agent to access EDV
     const {zcaps} = await profileManager.delegateEdvCapabilities({
-      edvClient,
+      hmac,
+      keyAgreementKey,
       parentCapabilities,
       invocationSigner,
       profileAgentId,
@@ -238,9 +221,10 @@ export async function delegateCapabilities({instanceId, user}) {
   return user;
 }*/
 
-export async function requestCapabilities({instance}) {
+export async function requestCapabilities({instance, profileManager}) {
   console.log('request credential issuance capabilities...');
   try {
+    const usersEdvReferenceId = profileManager.getUsersEdvReferenceId();
     const webCredential = await navigator.credentials.get({
       web: {
         VerifiablePresentation: {
@@ -251,8 +235,8 @@ export async function requestCapabilities({instance}) {
             // layer where "provision X+give me a zcap for it" query is needed
             type: 'OcapLdQuery',
             capabilityQuery: [{
-              referenceId: `${instance.id}-edv-users`,
-              revocationReferenceId: `${instance.id}-edv-users-revocations`,
+              referenceId: usersEdvReferenceId,
+              revocationReferenceId: `${usersEdvReferenceId}-revocations`,
               allowedAction: ['read', 'write'],
               invoker: instance.id,
               delegator: instance.id,
