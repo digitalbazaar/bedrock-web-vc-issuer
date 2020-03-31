@@ -104,7 +104,6 @@ export async function create(
   // update profile agent user with content and new zcaps
   const accessManager = await profileManager.getAccessManager({profileId});
   user = await accessManager.updateUser({user});
-
   return {user, instance};
 }
 
@@ -239,6 +238,6 @@ export async function requestCapabilities({instance}) {
   }
 }
 
-function _findZcap({zcaps, referenceId}) {
-  return zcaps.find(({referenceId: id}) => id === referenceId);
+function _findZcap({capabilities, referenceId}) {
+  return capabilities.find(({referenceId: id}) => id === referenceId);
 }
