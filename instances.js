@@ -38,6 +38,12 @@ export async function create(
     {capabilities, referenceId: 'user-edv-documents'});
   const revocationCapability = _findZcap(
     {capabilities, referenceId: 'user-edv-revocations'});
+  profileContent = {...profileContent};
+  const profileZcaps = {...profileContent.zcaps};
+  for(const zcap of capabilities) {
+    profileZcaps[zcap.referenceId] = zcap;
+  }
+  profileContent.zcaps = profileZcaps;
 
   // create keys for accessing `user` EDV
   const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
