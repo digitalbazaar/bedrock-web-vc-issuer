@@ -215,6 +215,9 @@ async function _createZcapDelegations({profileManager, instance, user}) {
   // TODO: fix data model for these: ["Read", "Issue", "Revoke", "Admin"]
   // map what are essentially roles to the appropriate capabilities
   if(capabilities.includes('Admin')) {
+    const profileInvocationZcapKeyRequest =
+      await _createProfileInvocationZcapKeyRequest(
+        {controller, profileManager, instanceId: instance.id});
     const userEdvRequest = await _createZcapRequestFromParent({
       controller,
       parentZcap: instance.zcaps['user-edv-documents'],
@@ -248,6 +251,7 @@ async function _createZcapDelegations({profileManager, instance, user}) {
       allowedAction: ['read', 'write']
     });
     const adminZcapRequests = [
+      profileInvocationZcapKeyRequest,
       userEdvRequest,
       userEdvHmacRequest,
       userEdvKakRequest,
@@ -350,7 +354,13 @@ async function _revokeZcaps(
   const zcapsToRevoke = [];
   // map what are essentially roles to the appropriate capabilities
   if(capabilitiesToRevoke.includes('Admin')) {
+    // FIXME: Remove this after profile zcap key is renamed
+    const adminAgent = await profileManager.getAgent({profileId: instance.id});
+    const {zcaps} = adminAgent;
+    const zcapReferenceId = await _getProfileInvocationZcapKeyReferenceId(
+      {instanceId: instance.id, zcaps});
     const adminZcaps = [
+      user.zcaps[zcapReferenceId],
       user.zcaps['user-edv-documents'],
       user.zcaps['user-edv-hmac'],
       user.zcaps['user-edv-kak'],
@@ -388,6 +398,34 @@ async function _revokeZcaps(
 async function _revokeZcap({signer, zcap}) {
   // FIXME: Implement revocation of zcaps
   return true;
+}
+
+// FIXME: this assumes the `profileManager` is an Admin
+async function _createProfileInvocationZcapKeyRequest(
+  {controller, profileManager, instanceId}) {
+  const adminAgent = await profileManager.getAgent({profileId: instanceId});
+  const {zcaps} = adminAgent;
+  const zcapReferenceId = await _getProfileInvocationZcapKeyReferenceId(
+    {instanceId, zcaps});
+  const {invocationTarget, allowedAction, referenceId} = zcaps[zcapReferenceId];
+  return {
+    allowedAction,
+    controller,
+    invocationTarget,
+    referenceId
+  };
+}
+
+async function _getProfileInvocationZcapKeyReferenceId(
+  {instanceId, zcaps}) {
+  // FIXME: simplify reference ID for this; force only one reference ID
+  // for using the agent's profile's capability invocation key using the
+  // literal reference ID: 'profile-capability-invocation-key'
+  return Object.keys(zcaps).find(referenceId => {
+    const capabilityInvokeKeyReference = '-key-capabilityInvocation';
+    return referenceId.startsWith(instanceId) &&
+          referenceId.endsWith(capabilityInvokeKeyReference);
+  });
 }
 
 async function _createZcapRequestFromParent(
