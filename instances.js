@@ -2,13 +2,6 @@
  * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
 import {delegateCapability} from 'bedrock-web-profile-manager/utils';
-// const route = '/vc-issuer/instances';
-//
-// const ALLOWED_ACTIONS = {
-//   read: ['read'],
-//   write: ['read', 'write'],
-//   issue: ['sign']
-// };
 
 export async function create(
   {profileManager, profileContent, profileAgentContent}) {
@@ -82,7 +75,7 @@ export async function create(
       edvRevocations: _findZcap({capabilities, referenceId: revokeZcapId})
     };
 
-    // create keys for accessing userEdv and credentialEdv EDVs
+    // create keys for accessing user and credential EDVs
     const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
       {profileId});
 
@@ -114,7 +107,7 @@ export async function create(
       referenceIdPrefix: edv
     });
 
-    // capablities to enable the profile agent to use the profile's userEdv EDV
+    // capablities to enable the profile agent to use the profile's user EDV
     for(const capability of zcaps) {
       user.zcaps[capability.referenceId] = capability;
     }
@@ -396,7 +389,7 @@ async function _revokeZcaps(
 }
 
 async function _revokeZcap({signer, zcap}) {
-  // FIME: Implement revocation of zcaps
+  // FIXME: Implement revocation of zcaps
   return true;
 }
 
