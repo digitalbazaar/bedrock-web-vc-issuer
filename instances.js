@@ -1,7 +1,6 @@
 /*!
  * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
-import {delegateCapability} from 'bedrock-web-profile-manager/utils';
 
 export async function create(
   {profileManager, profileContent, profileAgentContent}) {
@@ -339,10 +338,8 @@ async function _createZcapDelegations({profileManager, instance, user}) {
     ];
     zcapRequests.push(...readZcapRequests);
   }
-  const {invocationSigner: signer} = await profileManager.getProfileSigner(
-    {profileId: instance.id});
   const promises = zcapRequests.map(async request =>
-    delegateCapability({signer, request}));
+    profileManager.delegateCapability({profileId: instance.id, request}));
   // TODO: Use promise-fun lib to limit concurrency
   const zcaps = await Promise.all(promises);
   return {zcaps};
