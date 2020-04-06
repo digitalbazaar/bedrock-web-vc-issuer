@@ -29,6 +29,7 @@ export async function create(
   for(const zcap of capabilities) {
     profileZcaps[zcap.referenceId] = zcap;
   }
+  profileContent.issuer = presentation.holder;
   profileContent.zcaps = profileZcaps;
   // create keys for accessing `user` EDV
   const {hmac, keyAgreementKey} = await profileManager.createEdvRecipientKeys(
@@ -455,4 +456,3 @@ async function _createZcapRequestFromKey(
 function _findZcap({capabilities, referenceId}) {
   return capabilities.find(({referenceId: id}) => id === referenceId);
 }
-
