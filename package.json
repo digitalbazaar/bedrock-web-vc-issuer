@@ -9,7 +9,7 @@
   "dependencies": {
     "axios": "^0.19.0",
     "edv-client": "^2.0.0",
-    "ocapld": "digitalbazaar/ocapld.js#master",
+    "ocapld": "^2.0.0",
     "webkms-client": "^2.0.1"
   },
   "repository": {
