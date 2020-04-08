@@ -1,7 +1,6 @@
 /*!
  * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
-
 export async function create(
   {profileManager, profileContent, profileAgentContent}) {
   // create the instance as a profile
