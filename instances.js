@@ -11,7 +11,6 @@ export async function create(
   const presentation = await requestCapabilities({instance});
   if(!presentation) {
     throw new Error('User aborted instance provisioning.');
-    return;
   }
 
   // TODO: validate presentation (ensure it matches request and has the
