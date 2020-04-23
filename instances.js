@@ -1,6 +1,16 @@
 /*!
  * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
+import {EdvDocument} from 'edv-client';
+import jsigs from 'jsonld-signatures';
+import {decodeList, getCredentialStatus} from 'vc-revocation-list';
+import vc from 'vc-js';
+import {AsymmetricKey} from 'webkms-client';
+const {suites: {Ed25519Signature2018}} = jsigs;
+
+// TODO: need a common place for this
+const JWE_ALG = 'ECDH-ES+A256KW';
+
 export async function create(
   {profileManager, profileContent, profileAgentContent}) {
   // create the instance as a profile
@@ -205,6 +215,157 @@ export async function requestCapabilities({instance}) {
   } catch(e) {
     console.error(e);
   }
+}
+
+export async function revokeCredential(
+  {profileManager, instance, credentialId, documentLoader}) {
+  if(!(credentialId && typeof credentialId === 'string')) {
+    throw new TypeError('"credentialId" must be a non-empty string.');
+  }
+
+  // get interfaces for issuing/revoking VCs
+  const {suite, credentialsCollection} =
+    await _getIssuingInterfaces({profileManager, instance});
+  const {edvClient, capability, invocationSigner} = credentialsCollection;
+
+  // get credential document
+  let results = await edvClient.find({
+    equals: {'content.id': credentialId}
+  });
+  if(results.length === 0) {
+    throw new Error(`Credential "${credentialId}" not found.`);
+  }
+  let [credentialDoc] = results;
+  const {content: credential} = credentialDoc;
+  const credentialEdvDoc = _getEdvDocument(
+    {id: credentialDoc.id, edvClient, capability, invocationSigner});
+
+  // TODO: support other revocation methods
+
+  // get RLC document
+  const credentialStatus = getCredentialStatus({credential});
+  const revocationListIndex = parseInt(
+    credentialStatus.revocationListIndex, 10);
+  const {revocationListCredential} = credentialStatus;
+  results = await edvClient.find({
+    equals: {'content.id': revocationListCredential}
+  });
+  if(results.length === 0) {
+    throw new Error(
+      `RevocationListCredential "${revocationListCredential}" not found.`);
+  }
+
+  // FIXME: add timeout
+  let [rlcDoc] = results;
+  const rlcEdvDoc = _getEdvDocument(
+    {id: rlcDoc.id, edvClient, capability, invocationSigner});
+  let rlcUpdated = false;
+  while(!rlcUpdated) {
+    try {
+      // check if `credential` is already revoked, if so, done
+      const {encodedList} = rlcDoc.content;
+      const list = await decodeList({encodedList});
+      if(list.isRevoked(revocationListIndex)) {
+        rlcUpdated = true;
+        break;
+      }
+
+      // update index as revoked and reissue VC
+      list.setRevoked(revocationListIndex, true);
+      const {rlcCredential} = rlcDoc.content;
+      rlcCredential.encodedList = await list.encode();
+      // express date without milliseconds
+      const now = (new Date()).toJSON();
+      rlcCredential.issuanceDate = `${now.substr(0, now.length - 5)}Z`;
+
+      // clear existing proof and resign VC
+      // TODO: define `documentLoader`
+      delete rlcCredential.proof;
+      rlcDoc.content = await vc.issue(
+        {credential: rlcCredential, documentLoader, suite});
+
+      // update RLC doc
+      await rlcEdvDoc.write({doc: rlcDoc});
+      rlcUpdated = true;
+    } catch(e) {
+      if(e.name !== 'InvalidStateError') {
+        throw e;
+      }
+      // ignore conflict, read and try again
+      rlcDoc = await rlcEdvDoc.read();
+    }
+  }
+
+  // mark credential as revoked in its meta
+  // FIXME: add timeout
+  let credentialUpdated = credentialDoc.meta.revoked;
+  while(!credentialUpdated) {
+    try {
+      credentialDoc.meta.revoked = true;
+      await credentialEdvDoc.write({doc: credentialDoc});
+      credentialUpdated = true;
+    } catch(e) {
+      if(e.name !== 'InvalidStateError') {
+        throw e;
+      }
+      // ignore conflict, read and try again
+      credentialDoc = await credentialEdvDoc.read();
+      credentialUpdated = credentialDoc.meta.revoked;
+    }
+  }
+}
+
+async function _getIssuingInterfaces({profileManager, instance}) {
+  const {id: profileId} = instance;
+  const profileAgent = await profileManager.getAgent({profileId});
+  const {zcaps: {
+    ['key-assertionMethod']: assertionMethodZcap,
+    ['credential-edv-documents']: credentialsEdvZcap,
+    ['credential-edv-hmac']: credentialsEdvHmacZcap,
+    ['credential-edv-kak']: credentialsEdvKakZcap,
+  }} = profileAgent;
+
+  if(!(assertionMethodZcap && credentialsEdvZcap && credentialsEdvHmacZcap &&
+    credentialsEdvKakZcap)) {
+    throw new Error('Permission denied.');
+  }
+
+  const {edvClient, capability, invocationSigner} =
+    await profileManager.getProfileEdvAccess(
+      {profileId, referenceIdPrefix: 'credential'});
+
+  const issuerKey = new AsymmetricKey({
+    capability: assertionMethodZcap,
+    invocationSigner
+  });
+
+  const {invocationTarget: {verificationMethod}} = assertionMethodZcap;
+  const suite = new Ed25519Signature2018({
+    verificationMethod,
+    signer: issuerKey
+  });
+
+  edvClient.ensureIndex({attribute: 'content.id', unique: true});
+  edvClient.ensureIndex({attribute: 'content.type'});
+  edvClient.ensureIndex({attribute: 'meta.revoked'});
+
+  return {
+    suite,
+    // TODO: expose latter as a `Collection` instance
+    credentialsCollection: {edvClient, capability, invocationSigner}
+  };
+}
+
+async function _getEdvDocument(
+  {id, edvClient, capability, invocationSigner} = {}) {
+  const {keyResolver, keyAgreementKey, hmac} = edvClient;
+  const recipients = [{
+    header: {kid: keyAgreementKey.id, alg: JWE_ALG}
+  }];
+  return new EdvDocument({
+    id, recipients, keyResolver, keyAgreementKey, hmac,
+    capability, invocationSigner, client: edvClient
+  });
 }
 
 async function _createZcapDelegations({profileManager, instance, user}) {
