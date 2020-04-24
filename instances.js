@@ -278,6 +278,8 @@ export async function revokeCredential(
       // express date without milliseconds
       const now = (new Date()).toJSON();
       rlcCredential.issuanceDate = `${now.substr(0, now.length - 5)}Z`;
+      // TODO: we want to be using `issued`, right?
+      //rlcCredential.issued = issuanceDate;
 
       // clear existing proof and resign VC
       // TODO: define `documentLoader`
