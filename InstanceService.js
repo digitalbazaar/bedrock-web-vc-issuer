@@ -34,16 +34,16 @@ export class InstanceService {
    * Publish the latest version of a revocation list credential.
    *
    * @param {Object} options - The options to use.
-   * @param {string} options.credential - The RLC to publish.
+   * @param {string} options.id - The ID of the RLC to publish.
    * @param {string} options.profileAgent - The ID of the profile agent to
    *   use to publish the RLC.
    *
    * @returns {Promise} Resolves when the operation completes.
    */
-  async publishRlc({credential, profileAgent} = {}) {
+  async publishRlc({id, profileAgent} = {}) {
     try {
       // this HTTP API returns 204 with no body on success
-      await this._axios.post(credential.id, {profileAgent});
+      await this._axios.post(`${id}/publish`, {profileAgent});
     } catch(e) {
       _rethrowAxiosError(e);
     }

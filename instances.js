@@ -231,14 +231,16 @@ export async function revokeCredential(
 
   // get credential document
   let results = await edvClient.find({
-    equals: {'content.id': credentialId}
+    equals: {'content.id': credentialId},
+    capability,
+    invocationSigner
   });
   if(results.length === 0) {
     throw new Error(`Credential "${credentialId}" not found.`);
   }
   let [credentialDoc] = results;
   const {content: credential} = credentialDoc;
-  const credentialEdvDoc = _getEdvDocument(
+  const credentialEdvDoc = await _getEdvDocument(
     {id: credentialDoc.id, edvClient, capability, invocationSigner});
 
   // TODO: support other revocation methods
@@ -249,7 +251,9 @@ export async function revokeCredential(
     credentialStatus.revocationListIndex, 10);
   const {revocationListCredential} = credentialStatus;
   results = await edvClient.find({
-    equals: {'content.id': revocationListCredential}
+    equals: {'content.id': revocationListCredential},
+    capability,
+    invocationSigner
   });
   if(results.length === 0) {
     throw new Error(
@@ -258,13 +262,16 @@ export async function revokeCredential(
 
   // FIXME: add timeout
   let [rlcDoc] = results;
-  const rlcEdvDoc = _getEdvDocument(
+  let rlcId;
+  const rlcEdvDoc = await _getEdvDocument(
     {id: rlcDoc.id, edvClient, capability, invocationSigner});
   let rlcUpdated = false;
   while(!rlcUpdated) {
     try {
       // check if `credential` is already revoked, if so, done
-      const {encodedList} = rlcDoc.content;
+      const rlcCredential = rlcDoc.content;
+      const {credentialSubject: {encodedList}} = rlcCredential;
+      rlcId = rlcCredential.id;
       const list = await decodeList({encodedList});
       if(list.isRevoked(revocationListIndex)) {
         rlcUpdated = true;
@@ -273,8 +280,7 @@ export async function revokeCredential(
 
       // update index as revoked and reissue VC
       list.setRevoked(revocationListIndex, true);
-      const {rlcCredential} = rlcDoc.content;
-      rlcCredential.encodedList = await list.encode();
+      rlcCredential.credentialSubject.encodedList = await list.encode();
       // express date without milliseconds
       const now = (new Date()).toJSON();
       rlcCredential.issuanceDate = `${now.substr(0, now.length - 5)}Z`;
@@ -301,7 +307,7 @@ export async function revokeCredential(
 
   // publish latest version of RLC for non-authz consumption
   const instanceService = new InstanceService();
-  await instanceService.publishRlc({credential, profileAgent: profileAgent.id});
+  await instanceService.publishRlc({id: rlcId, profileAgent: profileAgent.id});
 
   // mark credential as revoked in its meta
   // FIXME: add timeout
