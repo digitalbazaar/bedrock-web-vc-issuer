@@ -6,6 +6,7 @@ import jsigs from 'jsonld-signatures';
 import {decodeList, getCredentialStatus} from 'vc-revocation-list';
 import vc from 'vc-js';
 import {AsymmetricKey} from 'webkms-client';
+import {InstanceService} from './InstanceService.js';
 const {suites: {Ed25519Signature2018}} = jsigs;
 
 // TODO: need a common place for this
@@ -224,7 +225,7 @@ export async function revokeCredential(
   }
 
   // get interfaces for issuing/revoking VCs
-  const {suite, credentialsCollection} =
+  const {profileAgent, suite, credentialsCollection} =
     await _getIssuingInterfaces({profileManager, instance});
   const {edvClient, capability, invocationSigner} = credentialsCollection;
 
@@ -296,6 +297,10 @@ export async function revokeCredential(
     }
   }
 
+  // publish latest version of RLC for non-authz consumption
+  const instanceService = new InstanceService();
+  await instanceService.publishRlc({credential, profileAgent: profileAgent.id});
+
   // mark credential as revoked in its meta
   // FIXME: add timeout
   let credentialUpdated = credentialDoc.meta.revoked;
@@ -350,6 +355,7 @@ async function _getIssuingInterfaces({profileManager, instance}) {
   edvClient.ensureIndex({attribute: 'meta.revoked'});
 
   return {
+    profileAgent,
     suite,
     // TODO: expose latter as a `Collection` instance
     credentialsCollection: {edvClient, capability, invocationSigner}
