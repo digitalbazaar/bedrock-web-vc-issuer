@@ -288,7 +288,6 @@ export async function revokeCredential(
       //rlcCredential.issued = issuanceDate;
 
       // clear existing proof and resign VC
-      // TODO: define `documentLoader`
       delete rlcCredential.proof;
       rlcDoc.content = await vc.issue(
         {credential: rlcCredential, documentLoader, suite});
