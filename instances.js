@@ -440,12 +440,10 @@ async function _createZcapDelegations({profileManager, instance, user}) {
       parentZcap: instance.zcaps['key-assertionMethod'],
       allowedAction: 'sign'
     });
-    const allowReadWrite = capabilities.includes('Read') ||
-      capabilities.includes('Revoke');
     const credentialEdvRequest = await _createZcapRequestFromParent({
       controller,
       parentZcap: instance.zcaps['credential-edv-documents'],
-      allowedAction: allowReadWrite ? ['read', 'write'] : 'write'
+      allowedAction: ['read', 'write']
     });
     const credentialEdvHmacRequest = await _createZcapRequestFromKey({
       key: instance.edvs.credential.hmac,
