@@ -6,13 +6,14 @@
 import axios from 'axios';
 
 /**
- * @param {Object} [config = {urls: {base: '/profiles'}}]
+ * Hello.
+ *
+ * @param {object} [config] - The config options to use.
  * @param {string} [config.baseURL] - The protocol, host and port for use with
- *   node.js (e.g. https://example.com)
+ *   node.js (eg https://example.com).
  * @param {object} [config.httpsAgent] - An optional
  *   node.js `https.Agent` instance to use when making requests.
- * @param {Object} [config.urls = {}]
- * @param {string} [config.urls.base = 'FIXME']
+ * @param {object} [config.urls={base: '/instances'}] - The service endpoints.
  */
 export class InstanceService {
   constructor({
@@ -33,7 +34,7 @@ export class InstanceService {
   /**
    * Publish the latest version of a revocation list credential.
    *
-   * @param {Object} options - The options to use.
+   * @param {object} options - The options to use.
    * @param {string} options.id - The ID of the RLC to publish.
    * @param {string} options.profileAgent - The ID of the profile agent to
    *   use to publish the RLC.
