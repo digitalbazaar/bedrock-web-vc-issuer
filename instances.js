@@ -568,6 +568,7 @@ async function _revokeZcaps(
   return zcapsToRevoke;
 }
 
+// eslint-disable-next-line no-unused-vars
 async function _revokeZcap({signer, zcap}) {
   // FIXME: Implement revocation of zcaps
   return true;
