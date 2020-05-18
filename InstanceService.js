@@ -6,7 +6,7 @@
 import axios from 'axios';
 
 /**
- * Hello.
+ * FIXME: Add description.
  *
  * @param {object} [config] - The config options to use.
  * @param {string} [config.baseURL] - The protocol, host and port for use with
