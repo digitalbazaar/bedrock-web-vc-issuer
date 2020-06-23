@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "axios": "^0.19.2",
-    "edv-client": "^2.7.0",
+    "edv-client": "^4.0.1",
     "jsonld-signatures": "^5.0.1",
     "ocapld": "^2.0.0",
     "vc-js": "^0.6.0",
