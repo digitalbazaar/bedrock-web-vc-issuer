@@ -230,15 +230,15 @@ export async function revokeCredential(
   const {edvClient, capability, invocationSigner} = credentialsCollection;
 
   // get credential document
-  let results = await edvClient.find({
+  const {documents: credentialDocuments} = await edvClient.find({
     equals: {'content.id': credentialId},
     capability,
     invocationSigner
   });
-  if(results.length === 0) {
+  if(credentialDocuments.length === 0) {
     throw new Error(`Credential "${credentialId}" not found.`);
   }
-  let [credentialDoc] = results;
+  let [credentialDoc] = credentialDocuments;
   const {content: credential} = credentialDoc;
   const credentialEdvDoc = await _getEdvDocument(
     {id: credentialDoc.id, edvClient, capability, invocationSigner});
@@ -250,18 +250,20 @@ export async function revokeCredential(
   const revocationListIndex = parseInt(
     credentialStatus.revocationListIndex, 10);
   const {revocationListCredential} = credentialStatus;
-  results = await edvClient.find({
+
+  const {documents: rlcDocuments} = await edvClient.find({
     equals: {'content.id': revocationListCredential},
     capability,
     invocationSigner
   });
-  if(results.length === 0) {
+
+  if(rlcDocuments.length === 0) {
     throw new Error(
       `RevocationListCredential "${revocationListCredential}" not found.`);
   }
 
   // FIXME: add timeout
-  let [rlcDoc] = results;
+  let [rlcDoc] = rlcDocuments;
   let rlcId;
   const rlcEdvDoc = await _getEdvDocument(
     {id: rlcDoc.id, edvClient, capability, invocationSigner});
