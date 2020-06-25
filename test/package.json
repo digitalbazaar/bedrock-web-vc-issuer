@@ -32,7 +32,7 @@
     "bedrock-ssm-mongodb": "^2.0.1",
     "bedrock-test": "^5.2.0",
     "bedrock-validation": "^4.3.0",
-    "bedrock-vc-issuer": "^3.1.0",
+    "bedrock-vc-issuer": "^5.0.0",
     "bedrock-vc-revocation-list-context": "^1.0.0",
     "bedrock-web-account": "^1.1.0",
     "bedrock-web-profile": "^2.2.0",
