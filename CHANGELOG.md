@@ -1,5 +1,10 @@
 # bedrock-web-vc-issuer ChangeLog
 
+## 2.2.0 - 2020-10-07
+
+### Changed
+- Update deps.
+
 ## 2.1.0 - 2020-07-01
 
 ### Changed
