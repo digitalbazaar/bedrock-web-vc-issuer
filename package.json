@@ -13,7 +13,7 @@
     "jsonld-signatures": "^5.1.0",
     "ocapld": "^2.0.0",
     "vc-js": "^0.6.4",
-    "vc-revocation-list": "^1.0.0",
+    "vc-revocation-list": "^3.0.0",
     "webkms-client": "^2.3.0"
   },
   "repository": {
