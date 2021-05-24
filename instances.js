@@ -2,12 +2,11 @@
  * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
 import {EdvDocument} from 'edv-client';
-import jsigs from 'jsonld-signatures';
 import {decodeList, getCredentialStatus} from 'vc-revocation-list';
-import vc from 'vc-js';
-import {AsymmetricKey} from 'webkms-client';
+import vc from '@digitalbazaar/vc';
+import {AsymmetricKey} from '@digitalbazaar/webkms-client';
 import {InstanceService} from './InstanceService.js';
-const {suites: {Ed25519Signature2018}} = jsigs;
+import {Ed25519Signature2018} from '@digitalbazaar/ed25519-signature-2018';
 
 // TODO: need a common place for this
 const JWE_ALG = 'ECDH-ES+A256KW';

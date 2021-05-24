@@ -1,5 +1,19 @@
 # bedrock-web-vc-issuer ChangeLog
 
+## 3.0.0 - TBD
+
+### Changed
+- **BREAKING**: Remove `axios` and use `@digitalbazaar/http-client`.
+- Update deps.
+  - Rename `vc-js` to `@digitalbazaar/vc`.
+  - Remove `jsonld-signatures` and get Ed25519Signature2018 suite from it's own
+    lib.
+  - Rename `webkms-client` to `@digitalbazaar/webkms-client` and update to
+    latest v6.0 that supports 2020 signature suites.
+  - Use `edv-client@9.0`.
+  - Use `vc-revocation-list@3.0`.
+- Update test deps to latest.
+
 ## 2.3.0 - TBD
 
 ### Changed
