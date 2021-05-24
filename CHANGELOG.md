@@ -1,5 +1,11 @@
 # bedrock-web-vc-issuer ChangeLog
 
+## 2.3.0 - TBD
+
+### Changed
+- Use `vc-revocation-list@3`. Breaking changes since `vc-revocation-list@1`
+  have no impact here.
+
 ## 2.2.0 - 2020-10-07
 
 ### Changed
