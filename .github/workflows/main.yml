@@ -46,6 +46,12 @@ jobs:
         npm test
       env:
         CI: true
+
+  # FIXME: There are some bugs in the version of instanbul that results in
+  # valid JS code not being parsed properly, causing webpack to fail to build
+  # the browser bundle.
+  # https://github.com/digitalbazaar/bedrock-karma/issues/14
+
   # coverage:
   #   runs-on: ubuntu-latest
   #   needs: [test-karma]
