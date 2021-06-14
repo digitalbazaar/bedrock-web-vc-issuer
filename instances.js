@@ -352,9 +352,7 @@ async function _getIssuingInterfaces({profileManager, instance}) {
     invocationSigner
   });
 
-  const {invocationTarget: {verificationMethod}} = assertionMethodZcap;
   const suite = new Ed25519Signature2018({
-    verificationMethod,
     signer: issuerKey
   });
 

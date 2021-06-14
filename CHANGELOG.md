@@ -3,22 +3,18 @@
 ## 3.0.0 - TBD
 
 ### Changed
-- **BREAKING**: Remove `axios` and use `@digitalbazaar/http-client`.
+- **BREAKING**: Remove `axios` and use `@digitalbazaar/http-client`. This is
+  breaking because errors thrown by the two libraries are not identical.
 - Update deps.
+  - **BREAKING**: Remove `jsonld-signatures` and get Ed25519Signature2018 suite
+    from it's own library. `verificationMethod` param removed from suite
+    constructor.
+  - Rename `webkms-client` to `@digitalbazaar/webkms-client` and
+    update to latest v6.0 that supports multiple asymmetric key types .
+  - Use `vc-revocation-list@3.0`. `vc-revocation-list@1` have no impact here.
   - Rename `vc-js` to `@digitalbazaar/vc`.
-  - Remove `jsonld-signatures` and get Ed25519Signature2018 suite from it's own
-    lib.
-  - Rename `webkms-client` to `@digitalbazaar/webkms-client` and update to
-    latest v6.0 that supports 2020 signature suites.
   - Use `edv-client@9.0`.
-  - Use `vc-revocation-list@3.0`.
 - Update test deps to latest.
-
-## 2.3.0 - TBD
-
-### Changed
-- Use `vc-revocation-list@3`. Breaking changes since `vc-revocation-list@1`
-  have no impact here.
 
 ## 2.2.0 - 2020-10-07
 
