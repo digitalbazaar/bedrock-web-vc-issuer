@@ -619,7 +619,7 @@ async function _createZcapRequestFromKey(
     invocationTarget: {
       id: key.id,
       type: key.type,
-      verificationMethod: key.id
+      publicAlias: key.id
     },
     parentCapability: key.id
   };
