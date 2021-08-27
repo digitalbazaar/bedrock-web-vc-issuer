@@ -1,13 +1,13 @@
 # bedrock-web-vc-issuer ChangeLog
 
-## 3.0.0 - TBD
+## 3.0.0 - 2021-08-27
 
 ### Changed
 - **BREAKING**: Remove `axios` and use `@digitalbazaar/http-client`. This is
   breaking because errors thrown by the two libraries are not identical.
 - Update deps.
   - **BREAKING**: Remove `jsonld-signatures` and get Ed25519Signature2018 suite
-    from it's own library. `verificationMethod` param removed from suite
+    from its own library. `verificationMethod` param removed from suite
     constructor.
   - Rename `webkms-client` to `@digitalbazaar/webkms-client` and
     update to latest v6.0 that supports multiple asymmetric key types .
